@@ -13,6 +13,44 @@
 
 **Start here:** open `index.html` in a browser (no build step, no dependencies).
 
+## How this course was built — the method
+
+I built this entire course **with Claude Code as my tutor**, in a tight loop that I repeated until my
+mock scores were consistently above 900. Nothing here came from a pre-made course; every lesson and mock
+was generated for me, from the official exam guide, in response to where I was actually weak.
+
+```
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │  1. LESSONS      Claude Code taught each official task statement,     │
+  │                  mechanism first, grounded in the exam guide + docs.  │
+  │        ↓                                                              │
+  │  2. MOCK EXAM    A full 60-item timed mock at exam weighting.         │
+  │        ↓                                                              │
+  │  3. GAP ANALYSIS I handed the results back. Claude Code found the     │
+  │     + TEACHING   patterns behind my misses — not just "wrong answer"  │
+  │                  but the habit causing it — and taught those parts    │
+  │                  again, visually, with real examples.                 │
+  │        ↓                                                              │
+  │  4. REPEAT       Another mock. Another debrief. Until 900+.           │
+  └──────────────────────────────────────────────────────────────────────┘
+```
+
+**The score trajectory that came out of it:**
+
+| Sitting | Score | What the debrief found |
+|---|---|---|
+| Mock 1 | 638 ✗ | Two whole topics untaught; reaching for shell habits (`sed`) over exam doctrine |
+| Mock 2 | 732 ✓ | Choosing invented, fancier-sounding mechanisms over the simple correct one |
+| Mock 3 | 883 ✓ | The "smoothing reflex" — avoiding inconvenient signals instead of honouring them |
+| Mock 5 | **949 ✓** | Every domain ≥ 93% |
+
+Each debrief in `drills/` is the written record of one of those loops. The `learning-records/` folder is the
+evidence trail — what was actually demonstrated, not just what was covered.
+
+**Why it worked:** the loop optimises for *storage strength* (can you retrieve it cold, under time pressure)
+rather than *fluency* (does it feel familiar while reading). Mocks are the measurement; lessons are the
+intervention; the debrief is what connects them.
+
 ## Layout
 
 | Path | What |
