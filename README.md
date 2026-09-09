@@ -1,11 +1,17 @@
 # CCAR-F Certification Prep — Claude Certified Architect (Foundations)
 
-A self-built study workspace for Anthropic's **Claude Certified Architect – Foundations** exam
-(code `CCAR-F`): 16 lessons covering all 30 official task statements across the five domains,
-timed full-length mock exams with exam-accurate scoring, remediation drills built from real
-mock results, and reference sheets.
+<p align="center">
+  <b>Built and maintained by Kumar Gaurav</b><br>
+  <a href="https://www.instagram.com/kgtechtalks/">📸 @kgtechtalks on Instagram</a> ·
+  <a href="https://github.com/kumargaurav121">GitHub</a>
+</p>
 
-**Start here:** open `index.html` in a browser (everything is static HTML — no build step).
+> **What this repo is:** my complete preparation kit for Anthropic's **Claude Certified Architect – Foundations**
+> exam (code `CCAR-F`). It contains **all 16 lessons** covering the 30 official task statements across the five
+> exam domains, **timed full-length mock exams** with exam-accurate scoring, remediation drills built from my
+> real mock results, and quick-reference sheets. Everything is static HTML — open `index.html` and start.
+
+**Start here:** open `index.html` in a browser (no build step, no dependencies).
 
 ## Layout
 
@@ -37,4 +43,15 @@ regenerated locally. To include them anyway: `git add -f mocks/mock3-data.js moc
 Mocks score like the real exam: percent-correct per domain × official weight
 (27 / 18 / 20 / 20 / 15), scaled to 1000, pass at **720**. Results persist in the browser only.
 
-*Not affiliated with Anthropic. Not exam content.*
+## Ownership & contributions
+
+This is a personal study repository owned by **Kumar Gaurav** ([@kgtechtalks](https://www.instagram.com/kgtechtalks/)).
+It is **read-only for everyone else**: only the owner can push. Feel free to fork it for your own preparation —
+pull requests are not being accepted, but you are welcome to open an issue if you spot an error in a lesson.
+
+---
+
+<p align="center">
+  Made with focus by <b>Kumar Gaurav</b> · <a href="https://www.instagram.com/kgtechtalks/">@kgtechtalks</a><br>
+  <sub>Not affiliated with Anthropic. Not exam content.</sub>
+</p>
