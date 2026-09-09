@@ -75,8 +75,10 @@ intervention; the debrief is what connects them.
 ## Using Claude Code with this repo
 
 This repo was built *with* Claude Code, and it works best when you keep using it that way. Open a
-terminal in the repo folder and start Claude Code — the workspace files (`MISSION.md`, `NOTES.md`,
-`GLOSSARY.md`, `learning-records/`) give it the context it needs to act as your tutor.
+terminal in the repo folder and start Claude Code. The repo ships a **`CLAUDE.md`** that Claude Code reads
+automatically — it tells it to act as your tutor, where everything lives, the source-of-truth rules, the
+exact data formats for mocks and quizzes, and the validation commands to run after generating anything.
+The workspace files (`MISSION.md`, `NOTES.md`, `learning-records/`) add the learner context.
 
 ```bash
 cd ccaf-certification-prep
