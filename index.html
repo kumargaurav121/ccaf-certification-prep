@@ -68,6 +68,36 @@
       <b>Official guide (PDF)</b><span>The authoritative source</span></a>
   </div>
 
+  <h2>Mock exams — quick access</h2>
+  <p style="font-size:.92rem;color:var(--ink-soft)">Full-length, timed, scored like the real exam (domain % × official
+  weight, scaled to 1000, pass at 720). Sit them closed-book in one go. Results stay in your browser.</p>
+  <div class="scroll-x">
+  <table>
+    <tr><th>#</th><th>Take it</th><th>Source</th><th>Items · time</th><th>Debrief / drill</th></tr>
+    <tr><td>1</td><td><a href="https://claudecertificationguide.com/mock-exam">External site</a></td>
+      <td>claudecertificationguide.com</td><td>60 · 120 min</td>
+      <td><a href="drills/mock1-repair.html">Repair drill</a></td></tr>
+    <tr><td>2</td><td><a href="mocks/mock2.html"><b>Mock 2</b></a></td>
+      <td>Original, 4 official scenarios</td><td>60 · 120 min</td>
+      <td><a href="drills/mock2-debrief.html">Debrief</a></td></tr>
+    <tr><td>3</td><td><a href="mocks/mock3.html"><b>Mock 3</b></a></td>
+      <td>Matthew Purcell's v2 set (6 scenarios)</td><td>60 · 120 min</td>
+      <td><a href="drills/mock3-debrief.html">Debrief</a></td></tr>
+    <tr><td>4</td><td><a href="mocks/mock4.html"><b>Mock 4</b></a></td>
+      <td>Original — weighted to Mocks 1–3 misses, fresh contexts</td><td>60 · 120 min</td>
+      <td>—</td></tr>
+    <tr><td>5</td><td><a href="mocks/mock5.html"><b>Mock 5</b></a></td>
+      <td>OlivierAlter's open GitHub set</td><td>77 · 154 min</td>
+      <td>—</td></tr>
+    <tr><td>6</td><td><a href="mocks/mock6.html"><b>Mock 6</b></a></td>
+      <td>cca-guide materials, set 4</td><td>60 · 120 min</td>
+      <td>—</td></tr>
+  </table>
+  </div>
+  <p style="font-size:.82rem;color:var(--ink-faint)">Mocks 3 and 5 use third-party question banks that are kept out of
+  the public repo; from a fresh clone those two pages need their <code>mocks/mock3-data.js</code> /
+  <code>mocks/mock5-data.js</code> files regenerated locally. All other mocks work out of the box.</p>
+
   <div class="key">
     <span class="key-label">How the lessons are built</span>
     <p>Every lesson teaches <b>mechanism first</b> — the real field names, the real behaviour,
@@ -219,6 +249,26 @@
     slow down rather than pressing on — a domain you half-know is worth fewer marks than the
     time it cost.</p>
   </div>
+
+  <h2>Run this repo</h2>
+  <p>Everything is static HTML — no build step, no dependencies, nothing to install.</p>
+  <ol style="font-size:.95rem">
+    <li><b>Clone it</b>
+      <pre style="margin:.5rem 0"><code>git clone https://github.com/kumargaurav121/ccaf-certification-prep.git
+cd ccaf-certification-prep</code></pre></li>
+    <li><b>Open <code>index.html</code></b> in any modern browser — double-click it, or from the terminal:
+      <pre style="margin:.5rem 0"><code>open index.html        # macOS
+xdg-open index.html    # Linux
+start index.html       # Windows</code></pre></li>
+    <li><b>Optional — serve it locally</b> if your browser restricts <code>file://</code> pages:
+      <pre style="margin:.5rem 0"><code>python3 -m http.server 8000
+# then visit http://localhost:8000</code></pre></li>
+  </ol>
+  <ul style="font-size:.9rem;color:var(--ink-soft)">
+    <li>Quiz and mock scores persist in your browser's local storage only — nothing is sent anywhere.</li>
+    <li>Each lesson's quiz reshuffles answer order on retry, so you can't pattern-match positions.</li>
+    <li>Dark mode follows your system setting automatically.</li>
+  </ul>
 
   <div class="ask">
     <strong>Ask me anything as you go.</strong> If a lesson explains <em>what</em> without
