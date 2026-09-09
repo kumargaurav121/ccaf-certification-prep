@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 06 — Structured Errors</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 2 · Lesson 06 of 16</p>
+  <h1>Structured Errors</h1>
+  <p class="standfirst">An agent's tool <em>will</em> fail — the network drops, the input is
+  malformed, policy says no. What the tool returns in that moment decides whether the agent
+  retries intelligently, explains gracefully, escalates, or thrashes. "Operation failed" produces
+  thrashing every time.</p>
+
+  <div class="meta">
+    <span><b>Domain 2</b> Tool Design &amp; MCP Integration · 18%</span>
+    <span><b>Covers</b> TS 2.2</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. Errors are information for the model</h2>
+
+  <p>The central inversion of this lesson: in ordinary software, errors flow to a handler. In an
+  agent system, errors flow to <b>a reasoning model that decides what to do next</b>. That changes
+  what an error message is <em>for</em>. It is not a log line — it is context the model reasons
+  over, exactly like a successful result.</p>
+
+  <p>MCP encodes this with two distinct channels, and the split matters
+  <span class="ts">TS 2.2</span>:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Channel</th><th>Mechanism</th><th>Covers</th><th>Who sees it</th></tr>
+    <tr><td><b>Protocol error</b></td><td>JSON-RPC <code>error</code> object</td>
+      <td>Unknown tool, malformed request, server fault</td>
+      <td class="no">Your client code</td></tr>
+    <tr><td><b>Tool execution error</b></td><td>Normal result with <code>isError: true</code></td>
+      <td>API failures, invalid input data, business rule violations</td>
+      <td class="yes">The model itself</td></tr>
+  </table>
+  </div>
+
+<pre><code>{
+  "content": [{
+    "type": "text",
+    "text": "Failed to fetch weather data: API rate limit exceeded"
+  }],
+  "isError": true
+}</code></pre>
+
+  <p>Execution errors ride inside the <em>result</em> deliberately: the model must see them to
+  self-correct. A protocol error never reaches the model; an <code>isError</code> result is the
+  model's problem to solve — which is precisely why its content needs to be worth reasoning
+  over.</p>
+
+  <h2>2. The four error categories</h2>
+
+  <p>The blueprint's taxonomy. What makes it useful is that <b>each category implies a different
+  correct next move</b> — that is the whole point of classifying.</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Category</th><th>Example</th><th>Retry?</th><th>The agent should…</th></tr>
+    <tr><td><b>Transient</b></td><td>Timeout, service unavailable</td>
+      <td class="yes">Yes</td><td>Retry, ideally with backoff — the world may differ in 2s</td></tr>
+    <tr><td><b>Validation</b></td><td>Malformed order ID, missing field</td>
+      <td class="no">Not as-is</td><td>Fix the input and call again — retrying unchanged input is waste</td></tr>
+    <tr><td><b>Business</b></td><td>Refund window expired, policy violation</td>
+      <td class="no">Never</td><td>Explain to the user, offer alternatives — no retry will change policy</td></tr>
+    <tr><td><b>Permission</b></td><td>Agent lacks authority for this operation</td>
+      <td class="no">Never</td><td>Escalate to someone who has the authority</td></tr>
+  </table>
+  </div>
+
+  <p>Now run the counterfactual: all four return <code>"Operation failed"</code>. The model cannot
+  tell a timeout from a policy violation, so it guesses — retrying the unretryable, apologising
+  for the transient, escalating the trivially fixable. <b>Uniform errors don't just lose
+  information; they convert every failure into the same failure.</b></p>
+
+  <h2>3. The structured error shape</h2>
+
+  <p>What the blueprint expects a well-designed MCP tool to return on failure:</p>
+
+<pre><code>{
+  "isError": true,
+  "content": [{ "type": "text", "text": JSON.stringify({
+    "errorCategory": "business",          // transient | validation | business | permission
+    "isRetryable": false,                  // the explicit decision, precomputed
+    "message": "Refund window expired: order ORD-12345 was delivered
+                47 days ago; policy allows refunds within 30 days.",
+    "customerExplanation": "I'm sorry — this order is outside our
+                30-day refund window.",
+    "alternatives": ["offer store credit", "escalate_to_human"]
+  })}]
+}</code></pre>
+
+  <ul>
+    <li><b><code>errorCategory</code></b> — the classification, so the model doesn't infer it.</li>
+    <li><b><code>isRetryable</code></b> — the retry decision made <em>by the tool author</em>, who
+      knows; not by the model, which would guess. This flag is what prevents wasted retry loops.</li>
+    <li><b>Human-readable specifics</b> — which rule, which values, so the model can explain.</li>
+    <li><b>Customer-friendly wording for business errors</b> — the blueprint calls this out:
+      the agent will relay policy refusals, so hand it wording fit to relay.</li>
+    <li><b>Alternatives</b> — the same trick as L03's hook denial reason: name the door that is
+      open, not just the one that closed.</li>
+  </ul>
+
+  <h2>4. Empty is not an error</h2>
+
+  <p>The subtlest discrimination in <span class="ts">TS 2.2</span>, and a reliable exam target:
+  <b>an access failure and a valid empty result are different facts</b>, and conflating them
+  corrupts reasoning in both directions.</p>
+
+  <div class="pair">
+    <div class="do">
+      <h4>Valid empty result</h4>
+      <p><code>search_orders("jane@x.com")</code> ran successfully and found nothing.
+      <b>This is an answer:</b> the customer has no orders. The agent should act on it —
+      not retry, not apologise for a system problem that didn't happen.</p>
+    </div>
+    <div class="dont">
+      <h4>Access failure dressed as empty</h4>
+      <p>The database timed out, and the tool caught the exception and returned <code>[]</code>
+      "to be safe". The agent now <em>believes</em> the customer has no orders. It will confidently
+      tell them so. A recoverable failure has become plausible misinformation.</p>
+    </div>
+  </div>
+
+  <p>Silently suppressing errors — returning empty-marked-success — is one of the two named
+  anti-patterns. The other is its mirror: <b>terminating the whole workflow on a single
+  failure</b>, when the failure was recoverable or peripheral. Between suppression and collapse
+  sits the correct behaviour: report the failure structurally and let the caller decide.</p>
+
+  <h2>5. Recover local, propagate structured</h2>
+
+  <p>In a multi-agent system, errors have a geography. The rule
+  <span class="ts">TS 2.2</span>: <b>handle locally what you can; propagate what you can't —
+  with everything the coordinator needs to decide.</b></p>
+
+  <ul>
+    <li><b>Local first:</b> a subagent hitting a transient failure retries with backoff itself.
+      The coordinator never hears about a timeout that resolved on the second attempt — that
+      would be noise.</li>
+    <li><b>Propagate structured:</b> when retries are exhausted, the subagent reports up:
+      failure type, <em>what was attempted</em>, <em>partial results</em> gathered before the
+      failure, and alternatives it can see.</li>
+  </ul>
+
+  <p>Partial results are the piece engineers forget. A search agent that found six of ten sources
+  before its API died has six sources. Propagating "search failed" throws them away;
+  propagating structure lets the coordinator proceed with partial coverage and annotate the gap —
+  which is exactly the pattern Domain 5 builds on later.</p>
+
+  <div class="note">
+    <span class="note-label">One instinct, three lessons</span>
+    <p>Notice this is the third appearance of the same principle: preserve structure across a
+    boundary, because the other side cannot see what you saw. Hook denial reasons (L03),
+    escalation handoffs (L03), and now error propagation. The exam tests it in all three
+    costumes.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p>The <a href="https://modelcontextprotocol.io/specification/2025-06-18/server/tools">MCP
+    specification's Tools page</a>, "Error Handling" section — the protocol-error vs
+    execution-error split with <code>isError</code> examples is stated in about ten lines.
+    Then skim <a href="https://code.claude.com/docs/en/mcp">Claude Code's MCP docs</a> for how
+    these surface in practice.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> The question worth asking here:
+    <em>"who should own retry logic — the tool, the subagent, or the coordinator?"</em> The answer
+    is layered, and reasoning it out loud is the best preparation for the error-propagation
+    questions in both Domain 2 and Domain 5.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 06</b> · Domain 2 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0005-tool-interfaces-and-selection.html">← L05 Tool Interfaces</a>
+      <a href="../reference/01-api-mechanics.html">Ref 01 — API mechanics</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L06-structured-errors',
+  title: 'Retrieval check — structured errors',
+  passMark: 0.72,
+  questions: [
+    {
+      ts: 'TS 2.2',
+      stem: 'In MCP, why are tool execution errors returned inside the result with isError: true, rather than as protocol-level JSON-RPC errors?',
+      options: [
+        'Execution errors must reach the model itself, which reasons over them and decides how to recover.',
+        'Protocol errors are reserved by the specification exclusively for failures inside the transport layer.',
+        'Results with isError set are retried automatically by the client before the model is ever involved.',
+        'JSON-RPC error objects cannot carry text content, so detailed messages would otherwise be truncated.'
+      ],
+      answer: 0,
+      why: 'The two channels have two audiences. Protocol errors (unknown tool, malformed request) go to your client code. Execution errors ride inside the result because the model must see them to self-correct — an error the model never sees is an error it cannot reason about.',
+      trap: 'Option C inverts the design: nothing about isError triggers automatic retries. The flag exists precisely so the retry decision can be made by the model, informed by the structured content.'
+    },
+    {
+      scenario: 'Customer Support Resolution Agent — process_refund fails for various reasons in production.',
+      ts: 'TS 2.2',
+      stem: 'All failures from process_refund currently return the string "Operation failed". What is the actual consequence for agent behaviour?',
+      options: [
+        'The agent cannot distinguish failure types, so it retries policy violations and apologises for transient faults.',
+        'The agent stops calling process_refund entirely after several failures, having learned the tool is unreliable.',
+        'The agent escalates every failure to a human, since escalation is the safest response to an unknown error.',
+        'The conversation terminates with an unhandled exception, because unstructured errors break the agentic loop.'
+      ],
+      answer: 0,
+      why: 'Uniform errors convert every failure into the same failure. Each category implies a different correct move — retry transient, fix validation, explain business, escalate permission — and without the category the model guesses, mismatching responses to causes.',
+      trap: 'Options B and D describe behaviours the loop does not have: models do not accumulate distrust across calls, and an isError result is a normal message, not an exception. The damage is subtler — plausible wrong recovery, every time.'
+    },
+    {
+      ts: 'TS 2.2',
+      stem: 'A customer requests a refund on an order delivered 47 days ago; policy allows 30. Beyond isError: true, what should the tool return?',
+      options: [
+        'Category "business", isRetryable false, the specific rule with its values, and customer-appropriate wording plus alternatives.',
+        'Category "validation", isRetryable true, so the agent can re-submit the request in case the delivery date was recorded wrongly.',
+        'Category "permission", isRetryable false, since the refund exceeds what the agent is authorised to grant without human review.',
+        'A minimal machine code such as REFUND_DENIED_POLICY, keeping wording out of the tool so the agent phrases the refusal itself.'
+      ],
+      answer: 0,
+      why: 'This is a business error: policy forbids the action, no retry changes that. The blueprint specifically calls for retriable: false plus customer-friendly explanation for business rule violations — the agent will relay the refusal, so hand it wording fit to relay, and name the open doors (store credit, escalation).',
+      trap: 'Option C misclassifies: the agent’s authority is not the issue — policy is, for anyone. Option D sounds like clean engineering but withholds exactly the specifics (which rule, which dates) the model needs to explain the refusal well.'
+    },
+    {
+      ts: 'TS 2.2',
+      stem: 'search_orders queries a database that occasionally times out. The implementer catches the timeout and returns an empty list "so the agent isn’t disrupted". Why is this the named anti-pattern?',
+      options: [
+        'A failure marked as success becomes an answer: the agent now believes, and tells the customer, that no orders exist.',
+        'Returning an empty list on timeout makes the tool slower on average, because empty responses still consume full round trips.',
+        'The empty list fails JSON schema validation downstream, since the schema requires at least one order object in the array.',
+        'Timeouts handled inside the tool prevent the client’s retry middleware from observing and recording the failure rate.'
+      ],
+      answer: 0,
+      why: 'An access failure and a valid empty result are different facts. Suppressing the error converts a recoverable failure into plausible misinformation — the worst trade available, because the agent acts confidently on a fact that was never established.',
+      trap: 'Option D is true-ish operationally but is not the harm the blueprint names. The damage is epistemic, not observational: the agent’s world-model now contains a false negative it has no way to doubt.'
+    },
+    {
+      scenario: 'Multi-Agent Research System — a web search subagent’s API fails partway through researching a topic.',
+      ts: 'TS 2.2',
+      stem: 'The subagent found 6 of ~10 expected sources before its search API began timing out, and its own retries are exhausted. What should it return to the coordinator?',
+      options: [
+        'The failure type, the queries attempted, the six sources already gathered, and alternative approaches it can identify.',
+        'A generic "search unavailable" status, keeping the partial sources internal since incomplete data could mislead synthesis.',
+        'The six sources alone, presented as the complete result, since partial coverage is preferable to reporting any failure.',
+        'An instruction to terminate the research workflow, since a partial evidence base would compromise the final report.'
+      ],
+      answer: 0,
+      why: 'Recover local, propagate structured: once local retries are exhausted, the coordinator needs failure type, what was attempted, partial results, and alternatives to decide — retry differently, substitute another source type, or proceed with annotated gaps. The six sources are real value; structure keeps them.',
+      trap: 'Option C is suppression’s twin — presenting partial as complete plants the same false belief as empty-marked-success. Option B throws away six sources and the context needed for any intelligent recovery.'
+    },
+    {
+      ts: 'TS 2.2',
+      stem: 'Why should isRetryable be set by the tool rather than left for the agent to infer from the error message?',
+      options: [
+        'The tool author knows which failures are transient; the model would be guessing, wasting retries on unretryable errors.',
+        'Models are unable to parse retry semantics out of natural language descriptions unless the wording is exactly standardised.',
+        'The flag allows the MCP client to retry at the transport layer without surfacing the failed result to the model at all.',
+        'Inference over error text consumes output tokens, and the flag exists primarily to reduce the cost of failure handling.'
+      ],
+      answer: 0,
+      why: 'It is a knowledge question, not a capability question. Whether a timeout resolves on retry or a policy refusal never does is domain knowledge the tool author holds with certainty and the model can only estimate. Precomputing the decision prevents wasted retry loops — the stated purpose in the blueprint.',
+      trap: 'Option C reinvents suppression: retrying below the model’s sight line hides real-world state from the reasoner. The flag informs the model’s decision; it does not bypass the model.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

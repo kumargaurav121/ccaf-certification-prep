@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock Exam 2 — CCAR-F</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<link rel="stylesheet" href="../assets/exam-runner.css">
+</head>
+<body>
+<div class="wrap exam-shell">
+  <p class="eyebrow">Mock Exam · full length · timed</p>
+  <div id="exam"></div>
+  <p style="margin-top:2rem;font-size:.8rem;color:var(--ink-faint);font-family:var(--mono)">
+    Not the real exam. Fresh items grounded in the official blueprint. Scores stay in your browser.
+    <a href="../index.html">← course home</a></p>
+</div>
+<script src="mock2-data.js"></script>
+<script src="../assets/exam-runner.js"></script>
+<script>
+  // Trim the 70-item bank to the exact 60-item exam at official domain weighting
+  // (D1×16, D2×11, D3×12, D4×12, D5×9). Drop-set chosen to preserve task-statement
+  // coverage and keep all three TS 5.5 items. Indices are 1-based positions in the bank.
+  var DROP = [16, 21, 22, 25, 48, 49, 58, 60, 67, 70];
+  var M = window.MOCK2;
+  M.questions = M.questions.filter(function (q, i) { return DROP.indexOf(i + 1) === -1; });
+  CCARExam.run('#exam', M);
+</script>
+</body>
+</html>

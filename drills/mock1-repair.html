@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock 1 Repair Drill</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<link rel="stylesheet" href="../assets/diagram.css">
+<style>
+  .toolcard {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: 1rem 1.2rem; margin: 1rem 0; background: var(--paper);
+  }
+  .toolcard h4 {
+    margin: 0 0 .35rem; font-family: var(--mono); font-size: .95rem;
+    display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
+  }
+  .toolcard h4 .what {
+    font-family: var(--sans); font-size: .78rem; font-weight: 400;
+    color: var(--ink-faint);
+  }
+  .toolcard p { font-size: .9rem; margin: .4rem 0; }
+  .toolcard pre { margin: .7rem 0; font-size: .76rem; }
+  .toolcard .verdict {
+    font-family: var(--mono); font-size: .64rem; letter-spacing: .1em;
+    text-transform: uppercase; padding: .12em .5em; border-radius: 3px;
+    border: 1px solid currentColor;
+  }
+  .toolcard .verdict.exam { color: var(--good); background: var(--good-bg); }
+  .toolcard .verdict.trap { color: var(--bad); background: var(--bad-bg); }
+  .pattern {
+    border-left: 3px solid var(--accent); background: var(--note-bg);
+    border-radius: 4px; padding: .9rem 1.1rem; margin: 1.1rem 0;
+  }
+  .pattern h4 { margin: 0 0 .4rem; font-size: .98rem;
+    display: flex; gap: .55rem; align-items: baseline; flex-wrap: wrap; }
+  .pattern p { font-size: .9rem; margin: .35rem 0; }
+  .pattern .ex {
+    font-size: .84rem; color: var(--ink-soft); margin-top: .5rem;
+    padding-top: .5rem; border-top: 1px solid var(--rule);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Repair drill · after Mock 1</p>
+  <h1>Mock 1 Repair Drill</h1>
+  <p class="standfirst">Sixteen of your 22 misses were concentrated: TS 5.5 (now Lesson 14) and
+  the cluster below. This drill starts from the ground up — what each tool actually <em>is</em> —
+  then the doctrine, then the leaked patterns, then eight fresh exam stems.</p>
+
+  <div class="meta">
+    <span><b>Targets</b> TS 2.5 ×3 · TS 1.5 ×2 · TS 1.6 ×2 · TS 2.3 ×2 · TS 1.2 · 1.3 · 2.1 · 2.4</span>
+    <span><b>Mock score</b> 638 · need +82</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat bad"><span class="n">3</span><span class="l">Edit-doctrine misses (TS 2.5)</span></div>
+    <div class="stat bad"><span class="n">2×</span><span class="l">you answered "use sed"</span></div>
+    <div class="stat accent"><span class="n">+49</span><span class="l">points this cluster was worth</span></div>
+  </div>
+
+  <h2>1. The tools themselves — what each one actually is</h2>
+
+  <p>You use these daily through Claude Code, but the exam tests whether you can name what each
+  does <em>mechanically</em>. Two of them search, three of them change files, one runs anything.</p>
+
+  <h3>The two searchers</h3>
+
+  <div class="toolcard">
+    <h4>Grep <span class="what">searches the CONTENT inside files, using regular expressions</span>
+      <span class="verdict exam">built-in</span></h4>
+    <p>Named after the classic Unix tool (<i>g</i>lobal <i>r</i>egular <i>e</i>xpression
+    <i>p</i>rint). You give it a text pattern; it scans through the <em>lines of text inside
+    files</em> and returns every file (and line) where the pattern occurs. It never cares what
+    a file is called — only what is written in it.</p>
+<pre><code>Grep  pattern: "calculateRefund\("        → every file whose text contains a
+                                            call to calculateRefund
+Grep  pattern: "TODO|FIXME"               → every line with either marker
+Grep  pattern: "import .* from 'legacy'"  → every import of the legacy package</code></pre>
+    <p><b>Reach for it when the question is about what code says:</b> "who calls this
+    function?", "where is this error message produced?", "which files import X?"</p>
+  </div>
+
+  <div class="toolcard">
+    <h4>Glob <span class="what">matches file PATHS against a wildcard pattern — never opens the files</span>
+      <span class="verdict exam">built-in</span></h4>
+    <p>A "glob" is the wildcard language of file paths. <code>*</code> matches anything within
+    one directory level; <code>**</code> matches across <em>any depth</em> of directories;
+    <code>{a,b}</code> tries both alternatives. Glob answers "which files exist with names like
+    this" — it reads nothing.</p>
+<pre><code>**/*.test.tsx        → every .test.tsx file, anywhere in the tree
+src/**/*.{ts,tsx}    → all TS/TSX under src/, any depth
+*.md                 → markdown files in the current directory only
+src/components/*.tsx → components at exactly that level (one *  = no recursion)</code></pre>
+    <p><b>Reach for it when the question is about what files are called:</b> "find all test
+    files", "list every YAML config", "are there any .env files here?"</p>
+    <p class="ex" style="border-top:1px solid var(--rule);padding-top:.5rem;font-size:.84rem;color:var(--ink-soft)">
+    The exam's favourite discrimination: <em>"find all callers of formatCurrency"</em> is a
+    <b>content</b> question → Grep. <em>"find all test files"</em> is a <b>naming</b> question →
+    Glob. Same lesson stem, opposite answers.</p>
+  </div>
+
+  <h3>The three changers</h3>
+
+  <div class="toolcard">
+    <h4>Read → Write <span class="what">load a whole file · write a whole file</span>
+      <span class="verdict exam">the recovery pair</span></h4>
+    <p><b>Read</b> loads a file's full contents into context. <b>Write</b> replaces the entire
+    file with new content. Together they are the blunt instrument: read everything, produce the
+    complete modified text, write everything back. Wasteful for small changes — but immune to
+    the anchor-uniqueness problem below, which is why they are the documented fallback.</p>
+  </div>
+
+  <div class="toolcard">
+    <h4>Edit <span class="what">surgical replacement: find this exact string, replace with that string</span>
+      <span class="verdict exam">preferred for targeted changes</span></h4>
+    <p>Edit takes an <code>old_string</code> and a <code>new_string</code>. It finds the old
+    text and swaps in the new — sending only a diff, not the whole file. The catch that generates
+    exam questions: <b>the old string must identify ONE place</b>. If it occurs twice, Edit
+    cannot know which you meant, so it <b>fails rather than guesses</b> — a safety feature.</p>
+<pre><code>File contains:            timeout: 30        ← line 12
+                          timeout: 30        ← line 48
+                          timeout: 30        ← line 95
+
+Edit old_string="timeout: 30"  →  ✗ FAILS: non-unique match
+                                   (refuses to guess which one)</code></pre>
+    <p>Two ways forward, for two different intents:</p>
+    <ul style="font-size:.9rem">
+      <li>You wanted <b>all of them</b> changed → re-run Edit with
+        <code>replace_all: true</code>. One call, every occurrence.</li>
+      <li>You wanted <b>one of them</b> changed → the anchor can't discriminate, so fall back
+        to <b>Read + Write</b>: load the file, change the right line, write it back.</li>
+    </ul>
+  </div>
+
+  <div class="toolcard">
+    <h4>Bash + sed <span class="what">what you actually reached for — twice</span>
+      <span class="verdict trap">always the distractor</span></h4>
+    <p><b>Bash</b> runs arbitrary shell commands — legitimate for tests, builds, git.
+    <b>sed</b> ("stream editor") is a 1970s Unix tool that rewrites text as it streams through:
+    <code>sed -i 's/userData/customerData/g' file.ts</code> means "in place
+    (<code>-i</code>), substitute (<code>s/</code>) every (<code>/g</code>) match". It works —
+    in your terminal. The exam scores it wrong every time, for stated mechanical reasons:</p>
+    <ul style="font-size:.9rem">
+      <li><b>The pattern is a regex whether you meant it or not.</b> Innocent-looking text is
+        full of live metacharacters: in <code>s/config.timeout/x/</code> the dot matches
+        <em>any</em> character, so <code>configXtimeout</code> also matches. Edit matches
+        literally.</li>
+      <li><b>No uniqueness guard.</b> sed happily changes all three <code>timeout: 30</code>
+        lines when you meant one — precisely the mistake Edit's failure exists to prevent.</li>
+      <li><b>Silent no-op.</b> If the pattern matches nothing, sed exits successfully having
+        changed nothing. Edit tells you it failed.</li>
+      <li><b>Line-number addressing is brittle</b> — the moment an earlier edit shifts the file,
+        <code>sed '48s/…'</code> points at the wrong line.</li>
+    </ul>
+    <p class="ex">The habit worth keeping from this: <em>your terminal instincts are optimised
+    for you, not for the exam's doctrine</em>. Catalogue so far: <code>sed</code> → Edit
+    doctrine · <code>Agent</code> → answer <code>Task</code> · stdin tricks → answer
+    <code>-p</code>.</p>
+  </div>
+
+  <h2>2. The Edit doctrine — one tree, three lost questions</h2>
+
+  <div class="diagram">
+    <svg viewBox="0 0 660 250" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Decision tree for file modification: single unique change goes to Edit; same change at every occurrence goes to Edit with replace_all true; Edit failing on non-unique anchor text goes to Read then Write; sed is never the answer.">
+      <defs>
+        <marker id="arD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+        </marker>
+      </defs>
+
+      <rect x="230" y="8" width="200" height="38" rx="6" class="box"/>
+      <text x="330" y="32" text-anchor="middle" font-size="12.5" font-weight="600">Modify a file — which tool?</text>
+
+      <line x1="330" y1="46" x2="110" y2="78" class="wire" marker-end="url(#arD)"/>
+      <line x1="330" y1="46" x2="330" y2="78" class="wire" marker-end="url(#arD)"/>
+      <line x1="330" y1="46" x2="552" y2="78" class="wire" marker-end="url(#arD)"/>
+
+      <text x="110" y="72" text-anchor="middle" font-size="10" class="dim">one change, anchor unique</text>
+      <text x="330" y="72" text-anchor="middle" font-size="10" class="dim">same change, EVERY occurrence</text>
+      <text x="552" y="72" text-anchor="middle" font-size="10" class="dim">one change, anchor NOT unique</text>
+
+      <rect x="30" y="82" width="160" height="52" rx="6" class="good-fill"/>
+      <text x="110" y="102" text-anchor="middle" font-size="12" font-weight="700" class="good-text">Edit</text>
+      <text x="110" y="120" text-anchor="middle" font-size="10">surgical, diff-only</text>
+
+      <rect x="250" y="82" width="160" height="52" rx="6" class="good-fill"/>
+      <text x="330" y="102" text-anchor="middle" font-size="12" font-weight="700" class="good-text">Edit + replace_all</text>
+      <text x="330" y="120" text-anchor="middle" font-size="10">rename a variable: 12 hits, 1 call</text>
+
+      <rect x="472" y="82" width="160" height="52" rx="6" class="accent-fill"/>
+      <text x="552" y="102" text-anchor="middle" font-size="12" font-weight="700" class="accent-text">Read → Write</text>
+      <text x="552" y="120" text-anchor="middle" font-size="10">documented recovery path</text>
+
+      <rect x="180" y="176" width="300" height="46" rx="6" class="bad-fill"/>
+      <text x="330" y="196" text-anchor="middle" font-size="12" font-weight="700" class="bad-text">Bash + sed — never the exam answer</text>
+      <text x="330" y="212" text-anchor="middle" font-size="9.5">regex surprises · no uniqueness guard · silent no-op · brittle line numbers</text>
+
+      <line x1="110" y1="134" x2="290" y2="176" class="wire dash"/>
+      <line x1="330" y1="134" x2="330" y2="176" class="wire dash"/>
+      <line x1="552" y1="134" x2="370" y2="176" class="wire dash"/>
+      <text x="330" y="164" text-anchor="middle" font-size="9.5" class="bad-text">your instinct routed all three here</text>
+    </svg>
+    <p class="cap">the three exam cases and the one distractor they all share</p>
+  </div>
+
+  <div class="flow">
+    <div class="flow-row"><span class="q">Rename <code>userData</code> → <code>customerData</code>, 12 occurrences, one file</span>
+      <span class="arrow">→</span><span class="tool ok">Edit + replace_all</span></div>
+    <div class="flow-row"><span class="q">Change ONE config value; the anchor text appears 3 times; Edit fails</span>
+      <span class="arrow">→</span><span class="tool">Read → Write</span></div>
+    <div class="flow-row"><span class="q">One change, anchor unique in the file</span>
+      <span class="arrow">→</span><span class="tool ok">Edit</span></div>
+    <div class="flow-row"><span class="q">"Quick global replace with sed"</span>
+      <span class="arrow">→</span><span class="tool no">distractor</span></div>
+    <div class="flow-row"><span class="q">Run the test suite / git commit / build</span>
+      <span class="arrow">→</span><span class="tool ok">Bash (its real job)</span></div>
+  </div>
+
+  <h2>3. The seven leaked patterns — re-armed properly</h2>
+
+  <p>Each of these was taught in L02–L08 and lost on the mock. For each: the principle, and the
+  concrete situation the exam wraps it in.</p>
+
+  <div class="pattern">
+    <h4><span class="ts">TS 1.5</span> Hooks vs prompts — and which hook</h4>
+    <p><b>Principle:</b> anything that must happen <em>every time, identically</em> is code, not
+    persuasion. A prompt instruction has a failure rate; a hook does not. Then pick the hook by
+    lifecycle position: <code>PreToolUse</code> fires <em>before</em> execution (block or rewrite
+    the call — policy gates, thresholds); <code>PostToolUse</code> fires <em>after</em> (transform
+    the result — normalisation).</p>
+    <p class="ex"><b>Exam wrapper:</b> "three backend tools return dates/money/status in three
+    formats and the agent misreads them." Format conversion is deterministic → hook, and there's
+    nothing to transform until the tool has <em>returned</em> → <code>PostToolUse</code> with
+    <code>updatedToolOutput</code>. A system-prompt conversion table is the polished-sounding
+    wrong answer.</p>
+  </div>
+
+  <div class="pattern">
+    <h4><span class="ts">TS 1.6</span> Fixed chain vs adaptive decomposition</h4>
+    <p><b>Principle:</b> one question decides it — <em>can you enumerate the steps before
+    starting?</em> Yes → fixed prompt chain (cheaper, testable, deterministic: take it). No,
+    because step 2 depends on what step 1 discovers → adaptive: map first, rank by impact, keep a
+    plan that updates as dependencies surface.</p>
+    <p class="ex"><b>Exam wrapper:</b> "migrate off the deprecated ORM / add tests to a legacy
+    codebase — entanglement unknown." The trap options decompose by what is already listable
+    (files, directories) when the risk lives in what isn't (the dependency graph). Decompose
+    around what you must <em>discover</em>.</p>
+  </div>
+
+  <div class="pattern">
+    <h4><span class="ts">TS 1.2</span> Context passing — subagents inherit nothing</h4>
+    <p><b>Principle:</b> a subagent starts with a fresh context window. It receives its own
+    system prompt, the Task call's prompt string, and project CLAUDE.md — <em>not</em> the
+    parent's conversation, not the parent's tool results, not a sibling's findings. The Task
+    prompt string is the <b>only</b> channel, so the coordinator must paste in everything the
+    subagent needs, as structured data so attribution survives.</p>
+    <p class="ex"><b>Exam wrapper:</b> "the implementation agent ignored the analysis agent's
+    dependency report." First suspect, always: the report was never in its prompt. Distractors
+    invent context eviction, prompt conflicts, or verbosity limits — none exist.</p>
+  </div>
+
+  <div class="pattern">
+    <h4><span class="ts">TS 1.3</span> Goal-oriented subagent prompts</h4>
+    <p><b>Principle:</b> tell a subagent <em>what outcome and what quality bar</em> — "cover all
+    major subtopics, cite every claim with source and date" — not <em>which steps in which
+    order</em>. A procedural script freezes the adaptability that justified spawning an agent:
+    it can no longer follow a lead, skip a dead end, or loop back on a gap.</p>
+    <p class="ex"><b>Exam wrapper:</b> options that "help" by dictating the query sequence or
+    pre-listing the URLs to fetch. They read as quality control; they are lobotomies.</p>
+  </div>
+
+  <div class="pattern">
+    <h4><span class="ts">TS 2.1</span> System-prompt keyword interference</h4>
+    <p><b>Principle:</b> tool selection is text-matching over names, descriptions, schemas —
+    <em>and the system prompt</em>. An instruction like "always analyse documents thoroughly"
+    quietly builds an association: requests containing "document" start flowing to whatever tool
+    has "document" in its name, overriding perfectly good descriptions.</p>
+    <p class="ex"><b>Exam wrapper:</b> "descriptions look excellent, selection still misroutes on
+    a keyword." Audit the system prompt for words that echo tool names. Distractors invent
+    priority tables and manifest orderings — no such mechanisms exist.</p>
+  </div>
+
+  <div class="pattern">
+    <h4><span class="ts">TS 2.3</span> Role scoping and <code>tool_choice</code></h4>
+    <p><b>Principle:</b> every tool an agent holds is a candidate answer to every selection it
+    makes — 18 tools "for flexibility" is a measurably less reliable agent than 4–5 scoped to
+    role. Unused tools are not free. Separately, <code>tool_choice</code> sets the floor:
+    <code>auto</code> = may answer in prose; <code>any</code> = some tool, guaranteed; forced =
+    that tool, guaranteed.</p>
+    <p class="ex"><b>Exam wrapper:</b> "grant everything so it never hits a wall" (kill it: scope
+    to role, add narrow cross-role tools for the frequent 85% case), and "the pipeline crashed
+    parsing a prose reply" (the <code>auto</code> hole — extraction never runs on auto).</p>
+  </div>
+
+  <div class="pattern">
+    <h4><span class="ts">TS 2.4</span> MCP config scope</h4>
+    <p><b>Principle:</b> one question — <em>who is this server for?</em> The team → project
+    <code>.mcp.json</code>, committed, arrives on clone, secrets referenced as
+    <code>${ENV_VAR}</code> so each machine resolves its own. Just you / an experiment →
+    user-scoped <code>~/.claude.json</code>, never committed.</p>
+    <p class="ex"><b>Exam wrapper:</b> "works on the lead's machine, nowhere else" (it's in their
+    user scope — move it, don't rewrite it) and "private repo, just inline the token" (a private
+    repo is not a secrets store; <code>${ENV_VAR}</code> is the pattern).</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="ask">
+    <strong>After grading:</strong> anything still wrong here gets a targeted mini-lesson — tell me
+    which. If you clear this drill and L14's quiz, your projected score is comfortably over the
+    720 line, and the remaining work is L15–L16 plus a second full mock.
+  </div>
+
+  <div class="foot">
+    <p><b>Repair drill</b> · built from Mock 1 (2026-09-07, 638/1000) · expanded 2026-09-07</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="../lessons/0014-calibration-and-review-routing.html">← L14 Calibration</a>
+      <a href="../reference/00-exam-blueprint.html">Ref 00 — Blueprint</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'DRILL-mock1-repair',
+  title: 'Repair check — 8 fresh stems on the missed patterns',
+  passMark: 0.8,
+  questions: [
+    {
+      ts: 'TS 2.5',
+      stem: 'A constant RETRY_LIMIT must be renamed to MAX_RETRIES everywhere it appears — 9 occurrences in one file. Most efficient built-in approach?',
+      options: [
+        'Edit with replace_all set to true, old string RETRY_LIMIT, new string MAX_RETRIES.',
+        'Read the whole file, then Write it back with all nine occurrences changed at once.',
+        'Bash with sed to perform the global substitution across the file in one command.',
+        'Nine successive Edit calls, each anchored with enough context to make it unique.'
+      ],
+      answer: 0,
+      why: 'Same change at every occurrence in one file is exactly what replace_all exists for — one call, sends only the diff. Read+Write is the recovery path for a DIFFERENT case (non-unique anchor on a single targeted change), and sed is always the distractor.',
+      trap: 'This is mock Q22 in new clothes. You picked sed there. The tell: "rename X to Y everywhere in this file" → replace_all, not shell, not rewrite.'
+    },
+    {
+      ts: 'TS 2.5',
+      stem: 'You need to change ONE of several identical timeout lines in a config file. Edit fails with a non-unique match error. Correct next step?',
+      options: [
+        'Read the full file, then Write back the complete file with that one line modified.',
+        'Retry Edit with replace_all so the failure cannot recur on this or future matches.',
+        'Use Bash with sed addressing the specific occurrence by its exact line number.',
+        'Use Grep with line numbers to locate the occurrence, then re-run the same Edit.'
+      ],
+      answer: 0,
+      why: 'Non-unique anchor → the documented fallback is Read + Write. replace_all would change ALL the identical lines when you want one; sed is the standing distractor; Grep locates but does not make the Edit anchor any more unique.',
+      trap: 'Mock Q25/Q40 restated. Distinguish the two Edit cases: every occurrence → replace_all; one occurrence among duplicates → Read + Write.'
+    },
+    {
+      ts: 'TS 1.5',
+      stem: 'Three MCP tools return money as cents (int), dollars (float), and a formatted string. The agent occasionally mis-adds amounts across tools. Correct fix?',
+      options: [
+        'A PostToolUse hook normalising every tool’s output to one numeric format before the model reads it.',
+        'A system prompt table documenting each tool’s money format with instructions for converting between them.',
+        'Few-shot examples demonstrating correct currency arithmetic across all three of the tools’ formats.',
+        'A PreToolUse hook that rejects any tool call whose response might use a non-standard money format.'
+      ],
+      answer: 0,
+      why: 'Deterministic conversion belongs in code that runs every time — PostToolUse transforms results before the model sees them, so only one format ever exists in context. Prompt/few-shot approaches run at some error rate forever.',
+      trap: 'PreToolUse fires before execution — there is no output to normalise yet, and rejecting calls fixes nothing. This is the L03 lifecycle distinction the mock caught you on twice.'
+    },
+    {
+      ts: 'TS 1.6',
+      stem: '"Migrate this legacy service off its deprecated ORM." Nobody knows how deeply the ORM is entangled. Which decomposition?',
+      options: [
+        'Adaptive: map usage first, identify high-impact areas, build a prioritised plan that updates as dependencies surface.',
+        'Fixed chain: list the repository’s files, then convert them one by one in path order until the migration completes.',
+        'Parallel fan-out: spawn one subagent per source file simultaneously, each converting its file independently.',
+        'Direct execution: begin converting the entry-point module and let the compiler errors reveal the dependency order.'
+      ],
+      answer: 0,
+      why: 'The next step depends on what mapping discovers — entanglement is unknown, so subtasks cannot be enumerated up front. That is the adaptive-decomposition case, verbatim from TS 1.6.',
+      trap: 'Options B and C decompose by file structure, which is known — but the RISK lives in the dependency structure, which is not. Decompose around what you must discover, not what you can already list.'
+    },
+    {
+      ts: 'TS 1.2',
+      stem: 'A refactoring coordinator’s analysis subagent produced a detailed dependency report. The implementation subagent then made changes that ignore those dependencies. Most likely cause?',
+      options: [
+        'The coordinator never included the dependency report in the implementation subagent’s prompt, and no context is inherited.',
+        'The implementation subagent’s context filled up, evicting the dependency report it had received at spawn time.',
+        'The two subagents hold incompatible system prompts, so the report was interpreted under different conventions.',
+        'The analysis subagent returned its report too verbosely for the coordinator to relay it within one Task call.'
+      ],
+      answer: 0,
+      why: 'Subagents start with fresh context; the Task prompt is the only channel. If the report is not pasted in, the implementer has literally never seen it. First suspect in every "agent ignored prior findings" stem.',
+      trap: 'Option B invents eviction — context does not silently drop what was provided at spawn. The mock’s context-passing questions all reduce to: was it in the prompt, or nowhere?'
+    },
+    {
+      ts: 'TS 1.3',
+      stem: 'Which coordinator instruction to a research subagent best enables adaptability?',
+      options: [
+        'State the research goal and quality bar — cover all major subtopics, cite every claim — and let it choose its approach.',
+        'Specify the exact query sequence to run, in order, with the number of sources to retrieve at each numbered step.',
+        'Provide the list of URLs to fetch and summarise, so the subagent cannot wander into low-quality source material.',
+        'Instruct it to mirror the approach that succeeded in the previous session’s equivalent research assignment.'
+      ],
+      answer: 0,
+      why: 'Goals + quality criteria, not procedures: the subagent can then adapt queries to what it finds. Procedural scripts freeze the very flexibility that justified using an agent.',
+      trap: 'Option C feels like quality control but converts a researcher into a fetch loop — it can no longer follow leads. Constrain outcomes, not steps.'
+    },
+    {
+      ts: 'TS 2.3',
+      stem: 'A code-navigation agent needs Grep, Glob, Read and occasionally Git history. The platform team proposes granting all 18 available tools "so it never hits a wall". Response?',
+      options: [
+        'Scope it to the four tools its role needs — larger tool sets measurably degrade selection reliability.',
+        'Accept, but order the tool list so the four core tools appear first and get selection preference.',
+        'Accept, since unused tools sit inert and cost nothing unless the agent actually invokes them.',
+        'Scope to four tools but add a fallback rule instructing the agent to request more when blocked.'
+      ],
+      answer: 0,
+      why: 'Every tool present occupies selection probability and enlarges the discrimination problem — 18 vs 4–5 is a reliability difference by itself, and agents misuse out-of-role tools simply because they are there.',
+      trap: 'Option C is the intuition to kill: unused tools are not free — they are candidate answers to every selection the model makes. Option B relies on an ordering preference that is not a contract.'
+    },
+    {
+      ts: 'TS 2.4',
+      stem: 'A teammate configured the team’s shared Postgres MCP server in their ~/.claude.json, and it works — for them. What is the correct correction?',
+      options: [
+        'Move the server definition to project .mcp.json with ${DB_URL} expansion, and commit it.',
+        'Have each teammate copy the working entry from that developer’s ~/.claude.json by hand.',
+        'Keep it user-scoped but symlink each teammate’s ~/.claude.json to the shared dotfiles repo.',
+        'Move it to .mcp.json with the connection string inline, since the repo is already private.'
+      ],
+      answer: 0,
+      why: 'Shared team tooling belongs in project-scoped .mcp.json (versioned, arrives on clone) with env-var expansion keeping credentials out of the commit. User scope is for personal/experimental servers only.',
+      trap: 'Option D gets the scope right and the secret wrong — a private repo is not a secrets store, and the pattern the exam wants is ${ENV_VAR}. This was mock Q47.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

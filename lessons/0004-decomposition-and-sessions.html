@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 04 — Decomposition &amp; Sessions</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<style>
+  .diag {
+    font-family: var(--mono); font-size: .76rem; line-height: 1.7;
+    background: var(--code-bg); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 1.2rem; margin: 1.5rem 0; overflow-x: auto;
+    white-space: pre; color: var(--ink-soft);
+  }
+  .diag b { color: var(--accent); font-weight: 600; }
+  .diag i { color: var(--good); font-style: normal; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 1 · Lesson 04 of 16 · closes Domain 1</p>
+  <h1>Decomposition &amp; Sessions</h1>
+  <p class="standfirst">Two questions finish Domain 1. How do you split a task that is too big to
+  do in one pass — and how do you come back to work an agent already did without paying for it
+  twice?</p>
+
+  <div class="meta">
+    <span><b>Domain 1</b> Agentic Architecture &amp; Orchestration · 27%</span>
+    <span><b>Covers</b> TS 1.6, TS 1.7</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. Two ways to decompose</h2>
+
+  <p>When a task is too large for one pass, you split it. There are exactly two shapes, and
+  <span class="ts">TS 1.6</span> is about choosing between them.</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th></th><th>Prompt chaining</th><th>Dynamic decomposition</th></tr>
+    <tr><td><b>Shape</b></td><td>A fixed sequential pipeline you define up front</td>
+      <td>Subtasks generated from what each step discovers</td></tr>
+    <tr><td><b>You know…</b></td><td>The steps before you start</td><td>Only the goal</td></tr>
+    <tr><td><b>Suits</b></td><td>Predictable multi-aspect work</td><td>Open-ended investigation</td></tr>
+    <tr><td><b>Example</b></td><td>Review each file, then a cross-file pass</td>
+      <td>"Add comprehensive tests to this legacy codebase"</td></tr>
+    <tr><td><b>Trades</b></td><td class="yes">Predictable, testable, cheaper</td>
+      <td class="yes">Adapts to what is actually there</td></tr>
+  </table>
+  </div>
+
+  <p>The decision rule is simply: <b>can you enumerate the steps in advance?</b> If yes, chain
+  them — you get determinism for free and you should take it. If the right second step depends on
+  what the first step finds, no fixed pipeline can express that, and forcing one produces the
+  narrow-decomposition failure from <a href="0002-coordinator-and-subagents.html">Lesson 02</a>.</p>
+
+  <h2>2. Prompt chaining: the review pattern</h2>
+
+  <p>The exam's worked case: a pull request touches 14 files. A single pass over all of them
+  produces detailed feedback on some, superficial comments on others, missed bugs, and
+  contradictory findings — the same pattern flagged in one file and approved in another.</p>
+
+  <p>The cause is <b>attention dilution</b>, and the fix is a chain:</p>
+
+  <div class="diag">  <b>Pass 1..N</b>  each file, independently  →  local issues, consistent depth
+                                        │
+  <b>Pass N+1</b>  all files together      →  cross-file data flow, integration bugs
+                                        │
+                                        ▼
+                               <i>merged findings</i></div>
+
+  <div class="warn">
+    <span class="warn-label">The distractor that catches engineers</span>
+    <p>"Use a model with a larger context window." <b>Wrong</b> — and worth understanding why.
+    Context window size governs how much <em>fits</em>. Attention dilution is about how evenly
+    the model attends across what fits. All 14 files already fit; that was never the constraint.
+    A bigger window changes nothing here.</p>
+  </div>
+
+  <h2>3. Dynamic decomposition: the legacy case</h2>
+
+  <p>"Add comprehensive tests to a legacy codebase" cannot be chained, because you do not yet know
+  what is there. The blueprint's pattern <span class="ts">TS 1.6</span> is three-phase:</p>
+
+  <ol>
+    <li><b>Map the structure</b> — what modules exist, what depends on what.</li>
+    <li><b>Identify high-impact areas</b> — what is most used, most fragile, least covered.</li>
+    <li><b>Build a prioritised plan that adapts</b> as dependencies are discovered.</li>
+  </ol>
+
+  <p>The word doing the work is <em>adapts</em>. Discovering that the payments module depends on
+  an untested date utility should change the plan. A fixed pipeline written before step 1 could
+  not have known the utility existed.</p>
+
+  <h2>4. What a session actually is</h2>
+
+  <p>A session is the accumulated conversation: your prompt, every tool call, every tool result,
+  every response. The SDK writes it to disk, so you can return to it with full context — files
+  already read, analysis already done.</p>
+
+  <div class="key">
+    <span class="key-label">Sessions persist the conversation, not the filesystem</span>
+    <p>This one sentence prevents several wrong answers. Returning to a session restores what the
+    agent <em>knew</em>. It does not restore what the code <em>was</em>. If files changed in
+    between, the session's memory of them is now a lie it does not know it is telling.</p>
+  </div>
+
+  <h2>5. Continue, resume, fork</h2>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Action</th><th>Finds the session by</th><th>Effect</th><th>Use when</th></tr>
+    <tr><td><b>Continue</b><br><code>continue: true</code></td><td>Most recent in this directory</td>
+      <td>Adds to it</td><td>One conversation at a time; no ID tracking</td></tr>
+    <tr><td><b>Resume</b><br><code>resume: &lt;id&gt;</code></td><td>A specific ID you captured</td>
+      <td>Adds to it</td><td>Multiple sessions, or returning to an older one</td></tr>
+    <tr><td><b>Fork</b><br><code>resume</code> + <code>fork_session</code></td><td>A specific ID</td>
+      <td class="yes">Copies history into a <em>new</em> session; original untouched</td>
+      <td>Exploring divergent approaches from one baseline</td></tr>
+  </table>
+  </div>
+
+  <p>In the CLI this is <code>--resume &lt;session-name&gt;</code> for a named session. In the SDK,
+  the ID comes from <code>session_id</code> on the result message; forking is
+  <code>fork_session=True</code> (Python) / <code>forkSession: true</code> (TypeScript), passed
+  <em>alongside</em> <code>resume</code>.</p>
+
+  <h2>6. Fork: one analysis, several futures</h2>
+
+  <p>The pattern <span class="ts">TS 1.7</span>: spend the expensive exploration once, then branch.
+  An agent analyses a codebase — reads the modules, maps dependencies, forms an understanding.
+  That baseline cost real tokens and time. Now you want to compare two refactoring approaches.</p>
+
+  <div class="diag">        <b>baseline session</b>  (codebase analysed — expensive)
+                 │
+        ┌────────┴────────┐
+     <b>fork A</b>            <b>fork B</b>          both start with the full analysis
+   "refactor to        "refactor to
+    repositories"       event sourcing"
+        │                 │
+     <i>own id</i>            <i>own id</i>         original stays untouched, resumable</div>
+
+  <div class="warn">
+    <span class="warn-label">Forking branches history, not files</span>
+    <p>If fork A edits a file, that edit is <b>real and visible to fork B</b> and to every other
+    session in that directory. You have branched the conversation, not the working tree. For
+    genuinely parallel exploration that writes code, isolate the filesystem too — separate
+    worktrees or checkpointing.</p>
+  </div>
+
+  <h2>7. When <em>not</em> to resume</h2>
+
+  <p>The subtlest point in <span class="ts">TS 1.7</span>, and the one most likely to be tested:
+  <b>starting a new session with a structured summary is sometimes more reliable than resuming.</b></p>
+
+  <p>Resuming replays every stale tool result into context. If the code changed after that session
+  ran, the agent now holds a confident, detailed, wrong picture — and stale specifics are worse
+  than no specifics, because the model has no reason to doubt them.</p>
+
+  <div class="pair">
+    <div class="do">
+      <h4>Resume when…</h4>
+      <p>Prior context is <em>mostly still valid</em>. You are following up on analysis, recovering
+      from an interrupted run, or continuing a thread where nothing underneath moved.</p>
+    </div>
+    <div class="dont">
+      <h4>Start fresh when…</h4>
+      <p>Prior tool results are <em>stale</em>. The code moved on. Inject a structured summary of
+      the conclusions — which are still true — and let the agent re-read what it needs.</p>
+    </div>
+  </div>
+
+  <p>There is a middle path worth knowing, because it is the cheapest of the three: resume, and
+  <b>tell the agent explicitly which files changed</b>. It then re-reads those specific files
+  rather than either trusting stale content or re-exploring everything from scratch.</p>
+
+  <div class="note">
+    <span class="note-label">Domain 1 complete</span>
+    <p>You now have all 7 task statements of the heaviest domain: the loop (L01), delegation across
+    isolated contexts (L02), deterministic guarantees (L03), and decomposition plus session
+    lifecycle (L04). That is ≈16 of 60 exam items. Domain 2 starts next — tool interfaces, and why
+    a tool description is the single most load-bearing string in an agent system.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://code.claude.com/docs/en/agent-sdk/sessions">Work with sessions</a>
+    (Claude Code docs) — the "Continue, resume, and fork" section and the note that forking
+    branches the conversation, not the filesystem. For decomposition, Anthropic's
+    <a href="https://www.anthropic.com/engineering/building-effective-agents">Building effective
+    agents</a> is the canonical treatment of prompt chaining versus agentic patterns, and it is
+    short.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> Good pressure points:
+    <em>"if forking doesn't isolate files, when is it actually safe?"</em> and
+    <em>"how do I decide a summary is enough versus needing the real context?"</em> — the second
+    is essentially a Domain 5 question, and we will hit it properly in L14.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 04</b> · Domain 1 complete · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0003-enforcement-and-hooks.html">← L03 Enforcement &amp; Hooks</a>
+      <a href="../reference/00-exam-blueprint.html">Ref 00 — Blueprint</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L04-decomposition-sessions',
+  title: 'Retrieval check — decomposition &amp; sessions',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Claude Code for Continuous Integration — automated review running on pull requests.',
+      ts: 'TS 1.6',
+      stem: 'A pull request modifies 14 files. A single review pass gives detailed feedback on some files, superficial comments on others, misses obvious bugs, and flags a pattern in one file while approving identical code in another. What restructuring fixes this?',
+      options: [
+        'Analyse each file individually for local issues, then run a separate pass examining cross-file data flow.',
+        'Move to a model with a larger context window so every one of the 14 files receives adequate attention.',
+        'Ask developers to split large pull requests into batches of 3–4 files before the automated review runs.',
+        'Run the full review three times independently and report only findings that appear in at least two runs.'
+      ],
+      answer: 0,
+      why: 'The cause is attention dilution across many files in one pass. Per-file passes give consistent depth; a separate integration pass still catches cross-file issues. This is prompt chaining — the steps are known in advance, so a fixed pipeline is the right shape.',
+      trap: 'Option B confuses capacity with attention. All 14 files already fit in context; the window was never the binding constraint. A larger window changes how much fits, not how evenly the model attends across it.'
+    },
+    {
+      ts: 'TS 1.6',
+      stem: 'You are asked to add comprehensive tests to an unfamiliar legacy codebase. Why is a fixed prompt chain the wrong decomposition here?',
+      options: [
+        'The correct next step depends on what each step discovers, so the subtasks cannot be enumerated in advance.',
+        'Prompt chaining cannot be applied to test generation, because tests must be written before implementation code.',
+        'A fixed chain would exceed the context window, since every step in a chain accumulates the previous step’s output.',
+        'Prompt chaining requires each step to use a different subagent, which is unavailable for test generation tasks.'
+      ],
+      answer: 0,
+      why: 'Dynamic decomposition applies when only the goal is known. Map the structure, identify high-impact areas, then build a prioritised plan that adapts as dependencies are discovered — because finding that payments depends on an untested date utility should change the plan.',
+      trap: 'Option C describes a real constraint on long chains, but it is not what disqualifies chaining here. Even with unlimited context you could not write the correct step 2 before running step 1.'
+    },
+    {
+      ts: 'TS 1.7',
+      stem: 'An agent spent significant time analysing a codebase. You now want to compare two different refactoring approaches, each building on that analysis, while keeping the ability to return to either. What do you use?',
+      options: [
+        'Fork the analysed session twice, giving two independent branches that share the same baseline.',
+        'Resume the analysed session twice in sequence, asking for one approach and then the other.',
+        'Start two fresh sessions and paste a written summary of the codebase analysis into both.',
+        'Run both approaches inside the original session so the model can compare them directly.'
+      ],
+      answer: 0,
+      why: 'Forking creates a new session seeded with a copy of the original history, leaving the original untouched. Each fork gets its own ID and can be resumed separately — exactly the "one expensive baseline, several futures" pattern.',
+      trap: 'Option B loses the comparison: the second resume happens after the first approach is already in context, so the two explorations contaminate each other rather than diverging from a shared baseline.'
+    },
+    {
+      ts: 'TS 1.7',
+      stem: 'You resumed a week-old session to continue work, and the agent confidently references function signatures that no longer exist. What is the underlying issue, and the most reliable fix?',
+      options: [
+        'Sessions restore prior tool results, which are now stale; start fresh and inject a structured summary of the conclusions.',
+        'Sessions expire after a fixed retention period, so the transcript was partially truncated; resume with a longer retention setting.',
+        'Sessions restore the filesystem to its earlier state, so the agent is reading genuinely old code; discard the working tree changes.',
+        'Sessions cannot be resumed across separate processes, so the history loaded incompletely; capture the session ID and resume again.'
+      ],
+      answer: 0,
+      why: 'A session persists the conversation, not the filesystem. Resuming replays every stale tool result into context, and stale specifics are worse than none — the model has no reason to doubt them. When prior results are stale, a fresh session with a summary of the still-true conclusions is more reliable.',
+      trap: 'Option C inverts the key fact. Sessions never touch the filesystem; that is also why a forked session’s file edits are visible to every other session in the directory.'
+    },
+    {
+      ts: 'TS 1.7',
+      stem: 'You resume an investigation session knowing exactly three files were modified since it ran. What is the most efficient correct approach?',
+      options: [
+        'Resume and tell the agent which three files changed, so it re-reads only those.',
+        'Resume without comment, since the agent will re-read any file it needs before using it.',
+        'Start a fresh session and have the agent re-explore the codebase from the beginning.',
+        'Fork the session so the stale content is isolated from the new investigation branch.'
+      ],
+      answer: 0,
+      why: 'This is the middle path and the cheapest of the three. Resuming preserves the expensive prior analysis; naming the changed files triggers targeted re-analysis instead of either trusting stale content or paying for full re-exploration.',
+      trap: 'Option D misunderstands forking: a fork copies the history, so the stale content comes with it. Forking branches the conversation — it does not clean it.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

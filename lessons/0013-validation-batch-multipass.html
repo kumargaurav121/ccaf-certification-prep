@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 13 — Validation, Batch &amp; Multi-Pass</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 4 · Lesson 13 of 16 · closes Domain 4</p>
+  <h1>Validation, Batch &amp; Multi-Pass</h1>
+  <p class="standfirst">L11 ended with a warning: schemas can't catch semantic errors. This
+  lesson is what catches them — validation loops that feed errors back, batch processing that
+  matches cost to latency tolerance, and review architectures that don't trust a model to
+  grade its own homework.</p>
+
+  <div class="meta">
+    <span><b>Domain 4</b> Prompt Engineering &amp; Structured Output · 20%</span>
+    <span><b>Covers</b> TS 4.4, TS 4.5, TS 4.6</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. Retry with error feedback</h2>
+
+  <p>An extraction fails Pydantic validation. The naive retry re-sends the same request — same
+  input, same instructions — and mostly gets the same failure. The blueprint's pattern
+  <span class="ts">TS 4.4</span> makes the retry a <em>correction</em>, not a re-roll. The
+  follow-up request contains three things:</p>
+
+  <ol>
+    <li><b>The original document</b> — the ground truth, again.</li>
+    <li><b>The failed extraction</b> — what the model produced.</li>
+    <li><b>The specific validation errors</b> — "line_items sum to 847.50 but stated_total is
+      874.50"; "due_date is '2026-13-01', month out of range".</li>
+  </ol>
+
+  <p>Now the model can <em>diagnose</em>: compare its own output against the source with the
+  error pointing at the discrepancy. Same machinery as L10's test-driven iteration — evidence
+  instead of repetition.</p>
+
+  <h2>2. When retries cannot work</h2>
+
+  <div class="key">
+    <span class="key-label">The discrimination the exam tests</span>
+    <p>Retries fix <b>format and structural errors</b> — the information was in the document and
+    came out wrong. Retries <b>cannot fix absence</b> — if the PO number exists only in a
+    separate purchase order you never provided, no number of retries will produce it. Each one
+    either returns null (correct, and retrying was waste) or fabricates (worse). Before retrying,
+    ask: <em>is the information actually in what I sent?</em></p>
+  </div>
+
+  <p>Two self-correction designs the blueprint names for catching semantic errors
+  <em>structurally</em> <span class="ts">TS 4.4</span>:</p>
+
+  <ul>
+    <li><b>Extract <code>calculated_total</code> alongside <code>stated_total</code></b> — make
+      the model compute the sum of line items as its own field, and a mismatch between the two
+      becomes machine-detectable without re-reading the document.</li>
+    <li><b><code>conflict_detected</code> booleans</b> — when the source itself is inconsistent
+      (two different totals printed), give the model a way to <em>say so</em> rather than
+      silently picking one. The nullable-field lesson again: honest signals need a legal
+      representation.</li>
+    <li><b><code>detected_pattern</code> fields on review findings</b> — record <em>which code
+      construct triggered</em> each finding, so when developers dismiss findings you can analyse
+      false-positive patterns systematically instead of anecdotally. This is the feedback loop
+      that feeds L12's category-disabling decision.</li>
+  </ul>
+
+  <h2>3. The Message Batches API: a latency-tolerance question</h2>
+
+  <p>The facts, fixed <span class="ts">TS 4.5</span>:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>Cost</td><td class="yes">50% cheaper</td></tr>
+    <tr><td>Processing window</td><td>Up to 24 hours</td></tr>
+    <tr><td>Latency SLA</td><td class="no">None</td></tr>
+    <tr><td>Correlation</td><td><code>custom_id</code> on each request/response pair</td></tr>
+    <tr><td>Multi-turn tool calling</td><td class="no">Not supported — no executing tools mid-request</td></tr>
+  </table>
+  </div>
+
+  <p>The decision is one question: <b>is anything blocked while this runs?</b> A developer
+  waiting at a merge gate — blocked, synchronous API, no argument. A technical-debt report read
+  tomorrow morning — nobody waits, batch, take the 50%. "Batches often finish faster than 24h"
+  is true and irrelevant: <em>often</em> is not a guarantee you can put in front of a human who
+  is waiting.</p>
+
+  <p>Three operational skills around it:</p>
+
+  <ul>
+    <li><b>SLA arithmetic.</b> Guaranteeing a 30-hour turnaround with a 24-hour processing window
+      means submitting batches at least every 4–6 hours — the submission cadence, not the
+      processing window, is your design variable.</li>
+    <li><b>Failure handling by <code>custom_id</code>.</b> When 7 of 100 documents fail,
+      resubmit <em>only those seven</em> — identified by <code>custom_id</code> — with
+      modifications that address why they failed (e.g. chunking the ones that exceeded context).
+      Resubmitting all 100 doubles cost for nothing.</li>
+    <li><b>Refine on a sample first.</b> Before batch-processing 10,000 documents, tune the
+      prompt on a small sample synchronously. First-pass success rate is the lever on total
+      cost — iterating via 24-hour round trips is the most expensive possible way to debug a
+      prompt.</li>
+  </ul>
+
+  <h2>4. Multi-pass and multi-instance review</h2>
+
+  <p>Two independent findings about review quality, both from
+  <span class="ts">TS 4.6</span>:</p>
+
+  <div class="pair">
+    <div class="do">
+      <h4>Split by scope: per-file + integration</h4>
+      <p>Large reviews in one pass produce attention dilution — inconsistent depth, missed bugs,
+      contradictory verdicts on identical code. Split: <b>per-file passes</b> catch local issues
+      at consistent depth; a <b>separate integration pass</b> examines what per-file passes
+      structurally cannot — cross-file data flow, mismatched assumptions between modules,
+      contract violations at boundaries.</p>
+    </div>
+    <div class="do">
+      <h4>Split by instance: generator ≠ reviewer</h4>
+      <p>A model retains its generation reasoning in context and won't effectively question its
+      own decisions in the same session — self-review instructions and extended thinking don't
+      remove the contamination. An <b>independent instance</b> with no generation context reviews
+      cold. (You met this in CI form in L10; here it's the general architecture.)</p>
+    </div>
+  </div>
+
+  <p>One nuance that looks like a contradiction until you see the structure: the blueprint
+  endorses <b>verification passes where the model self-reports confidence alongside each
+  finding</b> — to enable <em>calibrated review routing</em>. Haven't we spent three lessons
+  saying self-reported confidence is an unreliable proxy? The difference is what consumes it:</p>
+
+  <ul>
+    <li>Confidence as an <b>autonomous trigger</b> ("escalate when confidence &lt; 7") — rejected;
+      the number is uncalibrated and the model is confidently wrong exactly on the hard cases.</li>
+    <li>Confidence as <b>routing input, calibrated against labelled data</b> — endorsed; you
+      <em>measure</em> what 0.9 actually means against a validation set before letting it route
+      anything. The calibration machinery is Lesson 16.</li>
+  </ul>
+
+  <div class="note">
+    <span class="note-label">Domain 4 complete — 85% of the exam covered</span>
+    <p>Domains 1–4 done: ≈51 of 60 items. Domain 5 remains — Context Management &amp;
+    Reliability, three lessons — then the mocks. L14 starts with the context window as a
+    physical constraint: lost-in-the-middle, tool-output trimming, case-facts blocks and
+    scratchpads.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://platform.claude.com/docs/en/build-with-claude/batch-processing">Batch
+    processing</a> (Claude platform docs) — the constraints table at the top is TS 4.5 stated
+    officially. The multi-pass and self-review findings are best sourced from the
+    <a href="../reference/exam-guide-v1.0.pdf">Exam Guide</a> itself, §6 Domain 4 and sample
+    question 12.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> The one worth chewing on:
+    <em>"why does feeding the validation error back work, mechanically?"</em> — the answer
+    connects L01 (results re-enter context), L10 (evidence beats redescription) and this lesson,
+    and being able to give it means Domain 4 has actually stuck.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 13</b> · Domain 4 complete · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0012-criteria-and-few-shot.html">← L12 Criteria &amp; Few-Shot</a>
+      <a href="../reference/01-api-mechanics.html">Ref 01 — API mechanics</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L13-validation-batch-multipass',
+  title: 'Retrieval check — validation, batch &amp; multi-pass',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Structured Data Extraction — invoice extractions validated by Pydantic before entering downstream systems.',
+      ts: 'TS 4.4',
+      stem: 'An extraction fails validation. What does an effective retry request contain?',
+      options: [
+        'The original document, the failed extraction, and the specific validation errors that were raised.',
+        'The original document and fresh instructions, with the failed attempt omitted to avoid anchoring on it.',
+        'Only the specific validation errors, keeping the retry request small enough to stay well within context.',
+        'The failed extraction and a general instruction to re-examine every field with substantially more care.'
+      ],
+      answer: 0,
+      why: 'All three components: ground truth to re-read, the model’s own output to compare, and the specific errors pointing at the discrepancy. The retry becomes a diagnosis rather than a re-roll — evidence instead of repetition.',
+      trap: 'Option B’s anchoring worry removes exactly the evidence self-correction needs; without seeing its own error, the model has no reason to behave differently. Option C drops the source the correction must be checked against.'
+    },
+    {
+      ts: 'TS 4.4',
+      stem: 'Two extraction failures: (1) dates coming back as "March 3rd" instead of ISO 8601; (2) a purchase-order number that appears only in a separate document never provided. What is true about retrying each?',
+      options: [
+        'The date failure is retryable with error feedback; the PO number is not, because the information is absent from the source.',
+        'Both are retryable, though the missing PO number will need several more retry attempts before it is finally located.',
+        'Neither is retryable — both categories require regenerating the extraction schema before any retry can succeed.',
+        'The PO failure is retryable since retries broaden the search; the date failure needs a schema change instead.'
+      ],
+      answer: 0,
+      why: 'The blueprint’s line: retries fix format and structural errors — information present but wrongly rendered. They cannot fix absence: each retry either returns an honest null or fabricates. First question before any retry: is the information actually in what was sent?',
+      trap: 'Option B treats retrying as search — but the model is not looking anywhere new; the document simply does not contain the number, and persistence only raises the fabrication risk.'
+    },
+    {
+      ts: 'TS 4.4',
+      stem: 'You want mismatches between an invoice’s line items and its stated total to be machine-detectable without human review. Which design does the blueprint name?',
+      options: [
+        'Extract calculated_total alongside stated_total, so a discrepancy between the fields flags itself.',
+        'Add a regex constraint to the total field ensuring it is a well-formed currency amount in all cases.',
+        'Run each invoice through two independent extraction passes and diff the two resulting records.',
+        'Require the model to show its arithmetic in a scratchpad field that reviewers can spot-check later.'
+      ],
+      answer: 0,
+      why: 'Self-correction by construction: the model computes the sum as its own field, and validation compares two numbers — no document re-reading required. Companion pattern: conflict_detected booleans when the source itself is inconsistent.',
+      trap: 'Option C detects disagreement between runs, not disagreement with the document — two passes can make the same error. Option B validates format, and this is a semantic failure; L11’s line again.'
+    },
+    {
+      scenario: 'Claude Code for Continuous Integration — real-time Claude calls currently power (1) a blocking pre-merge check and (2) a technical-debt report generated overnight. Your manager proposes moving both to the Message Batches API for the 50% saving.',
+      ts: 'TS 4.5',
+      stem: 'How should you evaluate the proposal?',
+      options: [
+        'Batch the technical-debt report only; keep real-time calls for the pre-merge check.',
+        'Batch both workflows, adding status polling so completion is detected immediately.',
+        'Keep both real-time, since batch results can arrive out of order across submissions.',
+        'Batch both, with a timeout fallback that reruns slow batches through the real-time API.'
+      ],
+      answer: 0,
+      why: 'One question decides it: is anything blocked while this runs? Developers wait at the merge gate — no SLA means no batch. Nobody waits overnight for the report — batch it and take the 50%. This is official sample question 11.',
+      trap: 'Option C’s ordering worry is the named misconception — custom_id correlates request/response pairs regardless of order. Option D adds machinery where matching each workflow to its API is the simple, correct answer.'
+    },
+    {
+      ts: 'TS 4.5',
+      stem: 'A 100-document batch returns with 7 failures — 5 exceeded the context limit and 2 hit transient errors. What is the correct follow-up?',
+      options: [
+        'Resubmit only the 7 failed documents, identified by custom_id, chunking the 5 oversized ones first.',
+        'Resubmit the full batch of 100 with all documents pre-chunked, so every request fits comfortably.',
+        'Resubmit the 7 failures through the synchronous API, since batch retries repeat the same failures.',
+        'Resubmit the 5 oversized documents chunked, accepting the 2 transient failures as an expected loss.'
+      ],
+      answer: 0,
+      why: 'custom_id exists for exactly this: identify the failed pairs, resubmit only them, with modifications addressing the failure cause — chunk the oversized, plain-retry the transient. The 93 successes are done; paying for them again is waste.',
+      trap: 'Option C wrongly generalises "retries repeat failures": that holds when nothing changes, but chunking changes the cause, and transient errors clear on their own. Option D abandons 2 documents that a simple retry would recover.'
+    },
+    {
+      ts: 'TS 4.6',
+      stem: 'In the per-file + integration review architecture, what does the separate integration pass exist to catch?',
+      options: [
+        'Cross-file issues — data-flow breaks and mismatched assumptions that no single-file analysis can see.',
+        'Local bugs the per-file passes missed, functioning as a second opinion over each file in sequence.',
+        'Style inconsistencies between files, so the codebase converges on one convention over time.',
+        'False positives from the per-file passes, filtering the combined findings before they are posted.'
+      ],
+      answer: 0,
+      why: 'The split is by scope, not redundancy: per-file passes give consistent local depth; the integration pass examines what they structurally cannot — how data flows between files, contract mismatches at module boundaries.',
+      trap: 'Option B makes the integration pass a re-run, which reintroduces the attention dilution the split exists to avoid. Each pass has a distinct job; neither re-does the other’s.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

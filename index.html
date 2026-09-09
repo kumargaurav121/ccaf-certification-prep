@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCAR-F — Course Home</title>
+<link rel="stylesheet" href="assets/lesson.css">
+<style>
+  .domhdr {
+    display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap;
+    margin: 2.2rem 0 .5rem; padding-bottom: .35rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .domhdr h3 { margin: 0; font-size: 1.05rem; }
+  .domhdr .w {
+    font-family: var(--mono); font-size: .74rem; font-weight: 600; color: var(--accent);
+    background: var(--accent-bg); border: 1px solid currentColor;
+    border-radius: 3px; padding: .08em .45em;
+  }
+  .domhdr .items { font-family: var(--mono); font-size: .7rem; color: var(--ink-faint); }
+  .plan { list-style: none; padding: 0; margin: 0; }
+  .plan li {
+    display: grid; grid-template-columns: 3rem 1fr auto; gap: .8rem;
+    align-items: baseline; padding: .55rem .6rem;
+    border-bottom: 1px solid var(--rule-soft); font-size: .92rem;
+  }
+  .plan li:last-child { border-bottom: none; }
+  .plan li.done { background: var(--good-bg); border-radius: 3px; }
+  .plan .lid { font-family: var(--mono); font-size: .71rem; color: var(--ink-faint); font-weight: 600; }
+  .plan li.done .lid { color: var(--good); }
+  .plan .tsx { font-family: var(--mono); font-size: .66rem; color: var(--ink-faint); white-space: nowrap; }
+  .plan a { border-bottom: none; font-weight: 600; }
+  .plan .pending { color: var(--ink-soft); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem,1fr)); gap: .8rem; margin: 1.5rem 0; }
+  .card {
+    border: 1px solid var(--rule); border-radius: 5px; padding: .9rem 1rem;
+    text-decoration: none; display: block; background: var(--note-bg);
+  }
+  .card:hover { border-color: var(--accent); background: var(--accent-bg); }
+  .card b { display: block; font-size: .95rem; margin-bottom: .2rem; color: var(--ink); }
+  .card span { font-size: .8rem; color: var(--ink-soft); font-family: var(--sans); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Course home</p>
+  <h1>Claude Certified Architect — Foundations</h1>
+  <p class="standfirst">Sixteen lessons that teach the five official domains, in the exam's own
+  order and weighting. Each lesson teaches how the technology actually works, then tests whether
+  it stuck.</p>
+
+  <div class="meta">
+    <span><b>Exam</b> CCAR-F</span>
+    <span><b>60 items</b> / 120 min</span>
+    <span><b>Pass</b> 720 / 1000</span>
+    <span><b>Target</b> 2–3 weeks</span>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="reference/00-exam-blueprint.html">
+      <b>Exam blueprint</b><span>All 30 task statements, weights, scope</span></a>
+    <a class="card" href="reference/01-api-mechanics.html">
+      <b>API mechanics</b><span>Field names, enums, config keys</span></a>
+    <a class="card" href="reference/02-prep-strategy.html">
+      <b>How to prepare</b><span>What passers actually did</span></a>
+    <a class="card" href="reference/exam-guide-v1.0.pdf">
+      <b>Official guide (PDF)</b><span>The authoritative source</span></a>
+  </div>
+
+  <div class="key">
+    <span class="key-label">How the lessons are built</span>
+    <p>Every lesson teaches <b>mechanism first</b> — the real field names, the real behaviour,
+    with the primary doc linked. The exam is scenario-based, so it rewards understanding
+    tradeoffs over recalling features; you cannot reason about a tradeoff you do not understand
+    mechanically. The quiz at the end exists to convert reading into retention.</p>
+  </div>
+
+  <h2>Domain 1 — Agentic Architecture &amp; Orchestration</h2>
+  <div class="domhdr"><h3>The agent loop, multi-agent systems, hooks, sessions</h3>
+    <span class="w">27%</span><span class="items">≈16 items · 7 task statements</span></div>
+  <ul class="plan">
+    <li class="done"><span class="lid">L01</span>
+      <span><a href="lessons/0001-the-agentic-loop.html">The Agentic Loop</a> — <code>stop_reason</code>,
+      <code>tool_use</code>/<code>tool_result</code> blocks, why the anti-patterns fail</span>
+      <span class="tsx">TS 1.1</span></li>
+    <li class="done"><span class="lid">L02</span>
+      <span><a href="lessons/0002-coordinator-and-subagents.html">Coordinator &amp; Subagents</a>
+      — hub-and-spoke, context isolation, <code>AgentDefinition</code>, parallel spawning</span>
+      <span class="tsx">TS 1.2–1.3</span></li>
+    <li class="done"><span class="lid">L03</span>
+      <span><a href="lessons/0003-enforcement-and-hooks.html">Enforcement &amp; Hooks</a>
+      — prerequisite gates, <code>PreToolUse</code>/<code>PostToolUse</code>, structured handoff</span>
+      <span class="tsx">TS 1.4–1.5</span></li>
+    <li class="done"><span class="lid">L04</span>
+      <span><a href="lessons/0004-decomposition-and-sessions.html">Decomposition &amp; Sessions</a>
+      — chaining vs adaptive, <code>--resume</code>, <code>fork_session</code></span>
+      <span class="tsx">TS 1.6–1.7</span></li>
+  </ul>
+
+  <h2>Domain 2 — Tool Design &amp; MCP Integration</h2>
+  <div class="domhdr"><h3>Tool interfaces, errors, MCP servers, built-in tools</h3>
+    <span class="w">18%</span><span class="items">≈11 items · 5 task statements</span></div>
+  <ul class="plan">
+    <li class="done"><span class="lid">L05</span>
+      <span><a href="lessons/0005-tool-interfaces-and-selection.html">Tool Interfaces &amp; Selection</a>
+      — descriptions as the selection mechanism, splitting vs consolidating, <code>tool_choice</code></span>
+      <span class="tsx">TS 2.1, 2.3</span></li>
+    <li class="done"><span class="lid">L06</span>
+      <span><a href="lessons/0006-structured-errors.html">Structured Errors</a>
+      — <code>isError</code>, the four error categories, <code>isRetryable</code>, local recovery</span>
+      <span class="tsx">TS 2.2</span></li>
+    <li class="done"><span class="lid">L07</span>
+      <span><a href="lessons/0007-mcp-and-built-in-tools.html">MCP &amp; Built-in Tools</a>
+      — tools vs resources, <code>.mcp.json</code> scoping, Grep/Glob/Read/Edit</span>
+      <span class="tsx">TS 2.4–2.5</span></li>
+  </ul>
+
+  <h2>Domain 3 — Claude Code Configuration &amp; Workflows</h2>
+  <div class="domhdr"><h3>CLAUDE.md, rules, commands, skills, plan mode, CI</h3>
+    <span class="w">20%</span><span class="items">≈12 items · 6 task statements</span></div>
+  <ul class="plan">
+    <li class="done"><span class="lid">L08</span>
+      <span><a href="lessons/0008-configuration-hierarchy.html">Configuration Hierarchy</a>
+      — user/project/directory, <code>@import</code>, <code>.claude/rules/</code> globs, <code>/memory</code></span>
+      <span class="tsx">TS 3.1, 3.3</span></li>
+    <li class="done"><span class="lid">L09</span>
+      <span><a href="lessons/0009-commands-skills-plan-mode.html">Commands, Skills &amp; Plan Mode</a>
+      — scope rules, SKILL.md frontmatter, when plan mode earns its cost</span>
+      <span class="tsx">TS 3.2, 3.4</span></li>
+    <li class="done"><span class="lid">L10</span>
+      <span><a href="lessons/0010-refinement-and-cicd.html">Refinement &amp; CI/CD</a>
+      — the interview pattern, <code>-p</code>, <code>--json-schema</code>, independent review</span>
+      <span class="tsx">TS 3.5–3.6</span></li>
+  </ul>
+
+  <h2>Domain 4 — Prompt Engineering &amp; Structured Output</h2>
+  <div class="domhdr"><h3>Schemas, few-shot, validation, batch, multi-pass review</h3>
+    <span class="w">20%</span><span class="items">≈12 items · 6 task statements</span></div>
+  <ul class="plan">
+    <li class="done"><span class="lid">L11</span>
+      <span><a href="lessons/0011-structured-output.html">Structured Output</a>
+      — <code>tool_use</code> + JSON Schema, nullable fields, enum patterns, syntax vs semantics</span>
+      <span class="tsx">TS 4.3</span></li>
+    <li class="done"><span class="lid">L12</span>
+      <span><a href="lessons/0012-criteria-and-few-shot.html">Criteria &amp; Few-Shot</a>
+      — categorical criteria, 2–4 boundary examples with reasoning, false positives and trust</span>
+      <span class="tsx">TS 4.1–4.2</span></li>
+    <li class="done"><span class="lid">L13</span>
+      <span><a href="lessons/0013-validation-batch-multipass.html">Validation, Batch &amp; Multi-Pass</a>
+      — retry with error feedback, Message Batches API, independent review</span>
+      <span class="tsx">TS 4.4–4.6</span></li>
+  </ul>
+
+  <h2>Domain 5 — Context Management &amp; Reliability</h2>
+  <div class="domhdr"><h3>Context windows, escalation, error flow, provenance</h3>
+    <span class="w">15%</span><span class="items">≈9 items · 6 task statements</span></div>
+  <ul class="plan">
+    <li class="done"><span class="lid">L14</span>
+      <span><a href="lessons/0014-calibration-and-review-routing.html">Calibration &amp; Review Routing</a>
+      — pulled forward after Mock 1; aggregate mask, per-field calibration, stratified sampling, provenance</span>
+      <span class="tsx">TS 5.5–5.6</span></li>
+    <li class="done"><span class="lid">L15</span>
+      <span><a href="lessons/0015-context-windows-in-practice.html">Context Windows in Practice</a>
+      — lost-in-the-middle, tool-output trimming, case facts, scratchpads, manifests</span>
+      <span class="tsx">TS 5.1, 5.4</span></li>
+    <li class="done"><span class="lid">L16</span>
+      <span><a href="lessons/0016-escalation-and-error-propagation.html">Escalation &amp; Error Propagation</a>
+      — the three valid triggers, the two impostors, the propagation ladder</span>
+      <span class="tsx">TS 5.2–5.3</span></li>
+  </ul>
+
+  <h2>Mocks &amp; repair</h2>
+  <ul class="plan">
+    <li class="done"><span class="lid">M01</span>
+      <span><b>Mock 1 — 638/1000</b> (2026-09-07, claudecertificationguide.com). D4 92% · D3 83% ·
+      D1 57% · D5 45% · D2 36%. Gap analysis → L14 + repair drill</span>
+      <span class="tsx">all</span></li>
+    <li class="done"><span class="lid">R01</span>
+      <span><a href="drills/mock1-repair.html">Mock 1 repair drill</a> — Edit doctrine tree +
+      8 fresh stems on the missed D1/D2 patterns</span>
+      <span class="tsx">2.5, 1.5…</span></li>
+    <li class="done"><span class="lid">M02</span>
+      <span><a href="mocks/mock2.html">Mock Exam 2</a> — <b>732/1000, PASSED</b> (2026-09-07).
+      D2 91% · D5 78% (both fixed) · D1 56% (weak spot)</span>
+      <span class="tsx">all 30 TS</span></li>
+    <li class="done"><span class="lid">R02</span>
+      <span><a href="drills/mock2-debrief.html">Mock 2 debrief</a> — the coordinator/subagent
+      model made visual, and the elaborate-mechanism trap named</span>
+      <span class="tsx">1.2, 1.3, 1.6, 1.7</span></li>
+    <li class="done"><span class="lid">M03</span>
+      <span><a href="mocks/mock3.html">Mock Exam 3</a> — <b>883/1000, PASSED</b> (2026-09-08).
+      D1 94% · D3 100% · D2 91% · D4 83% · D5 67%. Purcell independent v2 set</span>
+      <span class="tsx">all domains</span></li>
+    <li class="done"><span class="lid">R03</span>
+      <span><a href="drills/mock3-debrief.html">Mock 3 debrief</a> — the smoothing reflex
+      (honour inconvenient signals), Batch API limits, isError envelope</span>
+      <span class="tsx">5.2, 5.3, 5.6, 4.1, 1.7, 4.5, 2.2</span></li>
+    <li><span class="lid">M04</span>
+      <span><a href="mocks/mock4.html">Mock Exam 4</a> — fresh contexts, weighted to your recurring
+      misses across Mocks 1–3, community themes folded in. <b>Final sitting before booking</b></span>
+      <span class="tsx">all 30 TS</span></li>
+    <li class="done"><span class="lid">M05</span>
+      <span><a href="mocks/mock5.html">Mock Exam 5</a> — <b>949/1000, PASSED</b> (2026-09-08), 73/77.
+      D1 95% · D2 93% · D3 94% · D4 94% · D5 100%. OlivierAlter’s open set</span>
+      <span class="tsx">all domains</span></li>
+    <li><span class="lid">M06</span>
+      <span><a href="mocks/mock6.html">Mock Exam 6</a> — ported from your cca-guide materials (set 4):
+      60 items · 120 min · blueprint-exact weighting · highest density of your weak task statements ·
+      zero overlap with anything already answered</span>
+      <span class="tsx">all 30 TS</span></li>
+  </ul>
+
+  <div class="note">
+    <span class="note-label">Pace</span>
+    <p>Sixteen lessons plus two mocks over 15 days is a little over one lesson per day. Community
+    consensus puts typical preparation at 4–6 weeks; your daily Claude Code experience is what
+    makes 2–3 weeks realistic, chiefly by making Domain 3 cheap. If a lesson's quiz goes badly,
+    slow down rather than pressing on — a domain you half-know is worth fewer marks than the
+    time it cost.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything as you go.</strong> If a lesson explains <em>what</em> without
+    explaining <em>why it works that way</em>, tell me and I'll go deeper. The exam rewards
+    understanding tradeoffs, and you cannot weigh a tradeoff you have only memorised.
+  </div>
+
+  <div class="foot">
+    <p><b>Course home</b> · grounded in Exam Guide v1.0 (July 2026) and current platform docs</p>
+  </div>
+
+</div>
+</body>
+</html>

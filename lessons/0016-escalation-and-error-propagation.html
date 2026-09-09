@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 16 — Escalation &amp; Error Propagation</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<link rel="stylesheet" href="../assets/diagram.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 5 · Lesson 16 of 16 · final lesson</p>
+  <h1>Escalation &amp; Error Propagation</h1>
+  <p class="standfirst">You got these right on Mock 1 — so this closing lesson confirms and
+  sharpens rather than re-teaches. It also patrols your two known reflexes, because escalation
+  stems are exactly where they get expensive: the urge to escalate "to be safe", and the urge to
+  trust a signal nobody measured.</p>
+
+  <div class="meta">
+    <span><b>Domain 5</b> Context Management &amp; Reliability · 15%</span>
+    <span><b>Covers</b> TS 5.2, TS 5.3</span>
+    <span><b>Mock 1</b> these TSs: correct ✓ — hold the line</span>
+  </div>
+
+  <h2>1. The three valid triggers — and the two famous impostors</h2>
+
+  <p>The blueprint recognises exactly three reasons for a support agent to escalate
+  <span class="ts">TS 5.2</span>. Everything else is either "keep working" or a trap.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 660 240" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Three valid escalation triggers — explicit customer request, policy gap or exception, no meaningful progress — flow to escalate. Two impostors — customer sentiment and self-reported confidence — are crossed out as invalid triggers.">
+      <defs>
+        <marker id="ar16" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+        </marker>
+      </defs>
+
+      <text x="8" y="18" font-size="13" font-weight="600">When does the agent hand off to a human?</text>
+
+      <rect x="8" y="36" width="190" height="44" rx="6" class="good-fill"/>
+      <text x="103" y="54" text-anchor="middle" font-size="10.5" font-weight="600" class="good-text">customer explicitly asks</text>
+      <text x="103" y="69" text-anchor="middle" font-size="9">honour immediately — no investigating first</text>
+
+      <rect x="8" y="90" width="190" height="44" rx="6" class="good-fill"/>
+      <text x="103" y="108" text-anchor="middle" font-size="10.5" font-weight="600" class="good-text">policy gap or exception</text>
+      <text x="103" y="123" text-anchor="middle" font-size="9">policy is silent or must be broken to resolve</text>
+
+      <rect x="8" y="144" width="190" height="44" rx="6" class="good-fill"/>
+      <text x="103" y="162" text-anchor="middle" font-size="10.5" font-weight="600" class="good-text">no meaningful progress</text>
+      <text x="103" y="177" text-anchor="middle" font-size="9">tools and clarification exhausted</text>
+
+      <line x1="198" y1="58" x2="300" y2="102" class="wire" marker-end="url(#ar16)"/>
+      <line x1="198" y1="112" x2="300" y2="112" class="wire" marker-end="url(#ar16)"/>
+      <line x1="198" y1="166" x2="300" y2="122" class="wire" marker-end="url(#ar16)"/>
+
+      <rect x="302" y="88" width="150" height="48" rx="6" class="accent-fill"/>
+      <text x="377" y="108" text-anchor="middle" font-size="12" font-weight="700" class="accent-text">ESCALATE</text>
+      <text x="377" y="124" text-anchor="middle" font-size="9">with a structured handoff (L03)</text>
+
+      <rect x="470" y="36" width="182" height="44" rx="6" class="bad-fill"/>
+      <text x="561" y="54" text-anchor="middle" font-size="10.5" font-weight="600" class="bad-text">✗ customer sentiment</text>
+      <text x="561" y="69" text-anchor="middle" font-size="9">anger ≠ complexity — often a routine refund</text>
+
+      <rect x="470" y="90" width="182" height="44" rx="6" class="bad-fill"/>
+      <text x="561" y="108" text-anchor="middle" font-size="10.5" font-weight="600" class="bad-text">✗ self-reported confidence</text>
+      <text x="561" y="123" text-anchor="middle" font-size="9">uncalibrated — wrong exactly on hard cases</text>
+
+      <text x="561" y="160" text-anchor="middle" font-size="9.5" class="dim">impostors: they correlate with escalation</text>
+      <text x="561" y="173" text-anchor="middle" font-size="9.5" class="dim">in stories, not in data</text>
+
+      <text x="330" y="212" font-size="10.5" class="dim">Everything else → keep working: resolve, or ask a clarifying question.</text>
+    </svg>
+    <p class="cap">three doors in, two painted-on doors that exam distractors point at</p>
+  </div>
+
+  <p>Three refinements the exam probes:</p>
+
+  <ul>
+    <li><b>"Escalate" and "resolve" aren't the only verbs.</b> When tool results return
+      <b>multiple customer matches</b>, the move is neither guessing by heuristic nor escalating —
+      it's <b>asking for another identifier</b>. Clarification is the forgotten middle option.
+      <span class="ts">TS 5.2</span></li>
+    <li><b>An angry customer with a routine issue gets resolution, not transfer.</b> Acknowledge
+      the frustration, fix the duplicate charge — escalate only if they <em>reiterate</em> the
+      request for a human after you've offered to fix it. But an <b>explicit request up front is
+      honoured immediately</b>, without attempting investigation first.</li>
+    <li><b>Policy gap beats "complex".</b> Competitor price-matching when policy only covers
+      own-site adjustments isn't a hard case — it's a case <em>policy doesn't answer</em>. The
+      agent improvising a commitment the business never made is the failure the trigger exists
+      to prevent.</li>
+  </ul>
+
+  <div class="warn">
+    <span class="warn-label">Your reflexes, patrolled</span>
+    <p>Mock 1 showed two habits: reaching for <b>self-reported confidence</b> (Q20) and for
+    <b>over-conservative blanket options</b> (Q26, Q34). In escalation stems these appear as
+    "escalate whenever the customer seems upset" and "escalate anything non-trivial to be safe."
+    Both are scored wrong for the same reason as before: sentiment and blanket caution are
+    <em>unmeasured proxies</em> for the thing that matters (can this be resolved within policy?),
+    and blanket escalation destroys the 80% first-contact-resolution target the scenario states.
+    The right answers name criteria — the three doors — and add few-shot boundary examples (L12).</p>
+  </div>
+
+  <h2>2. Error propagation: the reliability view</h2>
+
+  <p>You met structured errors in L06 from the <em>tool designer's</em> side. TS 5.3 is the same
+  truth from the <em>system's</em> side, and one ladder covers every stem
+  <span class="ts">TS 5.3</span>:</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 660 250" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Error propagation ladder: a failing subagent first retries locally; if unresolved it propagates structured error context — failure type, attempted query, partial results, alternatives — to the coordinator, which decides to retry differently, substitute, or proceed with partial results; the final output carries coverage annotations. Two anti-patterns flank the ladder: silent suppression and whole-workflow termination.">
+      <defs>
+        <marker id="ar16b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+        </marker>
+      </defs>
+
+      <rect x="10" y="20" width="180" height="46" rx="6" class="box"/>
+      <text x="100" y="39" text-anchor="middle" font-size="11" font-weight="600">1 · recover locally</text>
+      <text x="100" y="55" text-anchor="middle" font-size="9.5">subagent retries transient failures itself</text>
+
+      <line x1="100" y1="66" x2="100" y2="92" class="wire" marker-end="url(#ar16b)"/>
+      <text x="108" y="84" font-size="9" class="dim">still failing</text>
+
+      <rect x="10" y="94" width="180" height="60" rx="6" class="accent-fill"/>
+      <text x="100" y="112" text-anchor="middle" font-size="11" font-weight="600" class="accent-text">2 · propagate structure</text>
+      <text x="100" y="127" text-anchor="middle" font-size="9">failure type · what was attempted</text>
+      <text x="100" y="139" text-anchor="middle" font-size="9">partial results · alternatives</text>
+
+      <line x1="190" y1="124" x2="268" y2="124" class="wire" marker-end="url(#ar16b)"/>
+
+      <rect x="270" y="94" width="180" height="60" rx="6" class="box"/>
+      <text x="360" y="112" text-anchor="middle" font-size="11" font-weight="600">3 · coordinator decides</text>
+      <text x="360" y="127" text-anchor="middle" font-size="9">retry differently · substitute source</text>
+      <text x="360" y="139" text-anchor="middle" font-size="9">· proceed with partials</text>
+
+      <line x1="450" y1="124" x2="528" y2="124" class="wire" marker-end="url(#ar16b)"/>
+
+      <rect x="530" y="94" width="122" height="60" rx="6" class="good-fill"/>
+      <text x="591" y="112" text-anchor="middle" font-size="11" font-weight="600" class="good-text">4 · annotate</text>
+      <text x="591" y="127" text-anchor="middle" font-size="9">output marks well-supported</text>
+      <text x="591" y="139" text-anchor="middle" font-size="9">findings vs coverage gaps</text>
+
+      <rect x="115" y="192" width="200" height="44" rx="6" class="bad-fill"/>
+      <text x="215" y="210" text-anchor="middle" font-size="10.5" font-weight="600" class="bad-text">✗ suppress silently</text>
+      <text x="215" y="225" text-anchor="middle" font-size="9">empty result marked success = misinformation</text>
+
+      <rect x="345" y="192" width="200" height="44" rx="6" class="bad-fill"/>
+      <text x="445" y="210" text-anchor="middle" font-size="10.5" font-weight="600" class="bad-text">✗ terminate everything</text>
+      <text x="445" y="225" text-anchor="middle" font-size="9">one failed source ≠ a failed research task</text>
+
+      <text x="330" y="180" text-anchor="middle" font-size="9.5" class="dim">the two anti-patterns sit either side of the ladder — under- and over-reaction</text>
+    </svg>
+    <p class="cap">recover local → propagate structure → decide informed → annotate honestly</p>
+  </div>
+
+  <p>The discriminations each rung carries:</p>
+
+  <ul>
+    <li><b>Rung 1 filters noise.</b> The coordinator never hears about a timeout that a second
+      attempt fixed. Escalating every transient upward recreates the boy-who-cried-wolf problem
+      from L12's false positives.</li>
+    <li><b>Rung 2 is where "search unavailable" dies.</b> A generic status hides everything the
+      coordinator needs; the four fields (type, attempted, partials, alternatives) are what make
+      rung 3 possible. And the L06 distinction still rules: an <b>access failure</b> is a failure —
+      a <b>valid empty result is an answer</b>, and must not be dressed as either an error or a
+      success-with-data.</li>
+    <li><b>Rung 4 is the honesty step people forget.</b> If research proceeded with six of ten
+      sources, the report says which topic areas are <b>well-supported and which have gaps</b>
+      because sources were unavailable. That's L14's provenance instinct meeting error handling:
+      the reader learns what the system doesn't know.</li>
+  </ul>
+
+  <div class="key">
+    <span class="key-label">Domain 5 — and the course — in one line each</span>
+    <p><b>5.1/5.4:</b> decide what must survive; give it a home the budget can't touch.
+    <b>5.2:</b> escalate on the three doors, never on unmeasured proxies.
+    <b>5.3:</b> recover local, propagate structure, annotate gaps.
+    <b>5.5:</b> measure before you trust; keep sampling after you automate.
+    <b>5.6:</b> every claim keeps its receipt.</p>
+  </div>
+
+  <div class="note">
+    <span class="note-label">All 16 lessons complete — what happens now</span>
+    <p>All 30 task statements are covered. The path to the exam: <b>(1)</b> clear this quiz and
+    any outstanding ones; <b>(2)</b> take <b>Mock 2</b> under exam conditions — target 780+, and
+    given Mock 1's 638 with two whole clusters untaught, that is realistic; <b>(3)</b> repair
+    whatever Mock 2 exposes; <b>(4)</b> skim Ref 00 and the Exam Guide's §9 rationales the day
+    before; <b>(5)</b> book Pearson VUE if you still haven't. Remember the exam-vs-product traps:
+    <code>Task</code> not <code>Agent</code>, Edit doctrine not <code>sed</code>,
+    <code>-p</code> not stdin tricks.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="../reference/exam-guide-v1.0.pdf">Exam Guide §6, Domain 5, TS 5.2–5.3</a> — after
+    this lesson the bullets should read as a checklist you already hold. Sample questions 3 and 8
+    in §9 are the official versions of this lesson's two halves.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Final lesson — so a final offer.</strong> Bring me any question from Mock 1 you got
+    right but weren't <em>sure</em> about. Lucky guesses are unmarked gaps, and now is the
+    cheapest time to find them.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 16 of 16</b> · Domain 5 complete · all 30 task statements covered</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0015-context-windows-in-practice.html">← L15 Context Windows</a>
+      <a href="../drills/mock1-repair.html">Mock 1 repair drill</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L16-escalation-errors',
+  title: 'Retrieval check — escalation &amp; error propagation',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Customer Support Resolution Agent — 80%+ first-contact resolution target.',
+      ts: 'TS 5.2',
+      stem: 'A customer’s first message reads: "I don’t want to talk to a bot. Get me a human." The issue appears to be a routine address change the agent could complete in seconds. What does the agent do?',
+      options: [
+        'Escalate immediately with a structured handoff — an explicit request for a human is honoured without attempting the fix first.',
+        'Complete the routine address change first, then offer to connect the customer to a human if they are still dissatisfied.',
+        'Explain that the issue is simple and that a human would take longer, then proceed with resolving it autonomously.',
+        'Ask one clarifying question to confirm the issue really is an address change before deciding whether to escalate it.'
+      ],
+      answer: 0,
+      why: 'Explicit customer request is the first valid trigger and it is honoured immediately — no investigation first. The resolve-then-offer pattern applies to FRUSTRATION with no explicit request; an explicit demand is not a sentiment signal, it is an instruction.',
+      trap: 'Option B is the right answer to a different stem (angry customer, routine issue, no explicit request). The exam tests whether you can tell the two apart: frustration → acknowledge and resolve; explicit demand → comply now.'
+    },
+    {
+      ts: 'TS 5.2',
+      stem: 'get_customer returns three accounts matching the caller’s name. What is the correct behaviour?',
+      options: [
+        'Ask the customer for an additional identifier — order number, email — rather than selecting among the matches.',
+        'Escalate to a human agent, since acting on any of the three accounts risks modifying the wrong customer’s data.',
+        'Select the account with the most recent activity, as it is statistically the most likely to belong to the caller.',
+        'Proceed using only operations that would be safe on all three accounts until the identity becomes unambiguous.'
+      ],
+      answer: 0,
+      why: 'Multiple matches call for the forgotten middle verb: clarify. Requesting another identifier resolves the ambiguity in one turn and keeps first-contact resolution alive. Heuristic selection risks the wrong account; escalation dumps a solvable problem on a human.',
+      trap: 'Option B is the over-conservative reflex from your mock — it feels safe but is scored wrong: nothing here exceeds the agent’s capability, policy, or progress. Ambiguity you can resolve by asking is not an escalation trigger.'
+    },
+    {
+      ts: 'TS 5.2',
+      stem: 'Product proposes: "escalate automatically whenever message sentiment is strongly negative — angry customers deserve humans." Why does the blueprint reject this trigger?',
+      options: [
+        'Sentiment does not correlate with case complexity — anger is usually about a routine, resolvable issue, so the trigger misroutes work both ways.',
+        'Sentiment analysis is too slow to run inside a conversational loop, so the added latency would breach the response-time targets.',
+        'Negative sentiment is too rare in support traffic for the trigger to fire often enough to justify its implementation cost.',
+        'Customers would learn that anger reaches a human faster, creating an incentive that degrades every other routing signal.'
+      ],
+      answer: 0,
+      why: 'The blueprint’s stated reason: sentiment is an unreliable proxy for the thing that matters — whether the case is resolvable within policy and capability. Angry customers mostly have routine issues (resolve, warmly); calm customers can have genuine policy gaps (escalate).',
+      trap: 'Option D is a real second-order effect but is not the exam’s reason — and note it would argue for hiding the trigger, not removing it. The tested point is proxy-vs-criterion, the same axis as self-reported confidence.'
+    },
+    {
+      scenario: 'Multi-Agent Research System — the document-analysis subagent’s source API starts timing out mid-task.',
+      ts: 'TS 5.3',
+      stem: 'The subagent’s own retries with backoff are exhausted. Following the propagation ladder, what does it return to the coordinator?',
+      options: [
+        'Failure type, the queries it attempted, the partial results already gathered, and alternative approaches it can identify.',
+        'A concise "analysis unavailable" status, so the coordinator can decide quickly without processing failure detail.',
+        'The partial results presented as the completed analysis, with a note in its private log recording the API failures.',
+        'A recommendation that the coordinator terminate the research run, since the evidence base is no longer complete.'
+      ],
+      answer: 0,
+      why: 'Rung 2: propagate structure. The four fields are what let the coordinator choose between retrying differently, substituting a source, or proceeding with partials and annotating the gap (rung 4).',
+      trap: 'Options B, C and D are the three named failures in one line-up: the generic status that hides context, silent suppression dressed as success, and whole-workflow termination — under-reaction and over-reaction flanking the correct ladder.'
+    },
+    {
+      ts: 'TS 5.3',
+      stem: 'A search subagent queries an internal wiki for "Q3 incident postmortems" and receives a well-formed response containing zero documents. How should this be reported?',
+      options: [
+        'As a successful query with no matches — an empty result is an answer, distinct from any access failure.',
+        'As a retryable transient error, since zero results from a large wiki most likely indicates a degraded index.',
+        'As a coverage gap annotation, flagging that the postmortem topic area could not be supported by sources.',
+        'As a failure with partial results, so the coordinator can decide whether the empty set is trustworthy.'
+      ],
+      answer: 0,
+      why: 'The access-failure vs valid-empty distinction, now from the reporting side: the query succeeded and the answer is "none exist". Reporting it as any flavour of failure sends the coordinator chasing a problem that does not exist.',
+      trap: 'Option C misapplies rung 4 — coverage annotations mark topics that could not be checked because sources were UNAVAILABLE. Here the source was available and the answer is genuinely empty; annotating it as a gap misstates what the system knows.'
+    },
+    {
+      ts: 'TS 5.3',
+      stem: 'Research completed with two of five source categories unreachable. The synthesis is coherent and well-cited from the three available categories. What does the blueprint require of the final report?',
+      options: [
+        'Explicit annotations distinguishing well-supported findings from topic areas with gaps due to unavailable sources.',
+        'Nothing further — citations from the three available categories already document the evidence base accurately.',
+        'A lowered overall confidence score attached to the report, reflecting the reduced breadth of source coverage.',
+        'Removal of any section whose claims would have drawn on the unavailable categories, keeping only verified content.'
+      ],
+      answer: 0,
+      why: 'Rung 4, verbatim from the blueprint: structure synthesis output with coverage annotations — which findings are well-supported, which areas have gaps because sources were unavailable. The reader must learn what the system does not know, not just what it does.',
+      trap: 'Option C converts an honest, specific disclosure into an unmeasured global number — L14’s lesson in reverse. Option D hides the gap by amputation; the reader then cannot even ask the unanswered question.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

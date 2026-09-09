@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How People Prepare for CCA-F — Reference</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<style>
+  table { font-size: .85rem; }
+  .sect { font-family: var(--mono); font-size: .68rem; letter-spacing: .14em;
+          text-transform: uppercase; color: var(--accent); margin: 2.4rem 0 .6rem;
+          padding-bottom: .3rem; border-bottom: 1px solid var(--rule); }
+  .tier { font-family: var(--mono); font-size: .62rem; padding: .08em .4em;
+          border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; }
+  .t1 { color: var(--good); background: var(--good-bg); }
+  .t2 { color: var(--accent); background: var(--accent-bg); }
+  .t3 { color: var(--ink-faint); background: var(--note-bg); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Reference · 02</p>
+  <h1>How People Actually Prepare</h1>
+  <p class="standfirst">What Anthropic recommends, what the wider community reports, and which
+  third-party resources are worth your time. Researched August 2026.</p>
+
+  <div class="meta">
+    <span><b>Consensus prep time</b> 4–6 weeks</span>
+    <span><b>Your plan</b> 2–3 weeks intensive</span>
+    <span><b>Format</b> 100% scenario-based</span>
+  </div>
+
+  <p class="sect">The single most repeated piece of advice</p>
+
+  <div class="key">
+    <span class="key-label">Tradeoffs, not features</span>
+    <p>Every source converges on this: candidates who succeed <b>spend less time memorising
+    features and more time understanding tradeoffs</b> — when to enforce versus persuade, when
+    to batch versus call synchronously, when to escalate versus resolve. The exam never asks
+    "what does <code>-p</code> do" in isolation; it asks which of four architectures survives
+    a stated production constraint.</p>
+    <p style="margin-top:.6rem">The corollary: you still need the mechanics. You cannot evaluate
+    "should this use the Batch API" without knowing it has no latency SLA and cannot do multi-turn
+    tool calling. Mechanics are necessary; they are just not sufficient.</p>
+  </div>
+
+  <p class="sect">Anthropic's own recommendations (Exam Guide §7–8)</p>
+
+  <p>The guide names seven preparation activities and four hands-on exercises. These carry more
+  weight than any third-party advice, because the same authors wrote the items.</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Build this</th><th>Which it covers</th></tr>
+    <tr><td>A complete agentic loop with the Agent SDK — tool calling, error handling, session
+      management, subagent spawning and context passing</td><td>Domain 1</td></tr>
+    <tr><td>Claude Code configured for a real project — CLAUDE.md hierarchy, path-specific rules
+      in <code>.claude/rules/</code>, a skill with <code>context: fork</code> and
+      <code>allowed-tools</code>, one MCP server</td><td>Domain 3, 2</td></tr>
+    <tr><td>MCP tools with descriptions that differentiate similar tools, plus structured error
+      responses with categories and retryable flags; test selection with ambiguous requests</td><td>Domain 2</td></tr>
+    <tr><td>A structured extraction pipeline — <code>tool_use</code> with JSON schemas,
+      validation-retry loops, nullable fields, Message Batches practice</td><td>Domain 4</td></tr>
+    <tr><td>Multi-pass review architectures and few-shot examples for ambiguous scenarios</td><td>Domain 4</td></tr>
+    <tr><td>Context management practice — extracting structured facts from verbose tool output,
+      scratchpad files, subagent delegation for context limits</td><td>Domain 5</td></tr>
+    <tr><td>Escalation and human-in-the-loop patterns, with confidence-based review routing</td><td>Domain 5</td></tr>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="note-label">Realistic adaptation for a 2–3 week plan</span>
+    <p>Building all four exercises properly is a multi-week project on its own. Prioritise
+    <b>Exercise 1 (agentic loop with escalation)</b> and <b>Exercise 2 (Claude Code team
+    config)</b>: the first covers the heaviest domain and the second is quick given your daily
+    Claude Code use. Read exercises 3 and 4 as designs rather than building them, unless the
+    Domain 4 and 5 quizzes go badly.</p>
+  </div>
+
+  <p class="sect">Reported experience</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Claim</th><th>Source quality</th><th>Notes</th></tr>
+    <tr><td>Typical preparation is <b>4–6 weeks</b>; less for people already building AI systems</td>
+      <td><span class="tier t3">aggregated</span></td>
+      <td>Consistent across several prep sites. 2–3 weeks is aggressive but plausible with prior Claude Code fluency.</td></tr>
+    <tr><td>All questions are scenario-based architectural decisions</td>
+      <td><span class="tier t1">official</span></td>
+      <td>Confirmed by Exam Guide §5 and the 12 published samples.</td></tr>
+    <tr><td>Multiple-choice <em>and</em> multiple-response; each item says how many to pick</td>
+      <td><span class="tier t1">official</span></td>
+      <td>Do not assume every item is single-answer.</td></tr>
+    <tr><td>Passing scores in the high 800s are reported by candidates who did the hands-on work</td>
+      <td><span class="tier t3">anecdotal</span></td>
+      <td>Cut score is 720; treat 800+ as comfort margin, not a target.</td></tr>
+    <tr><td>Anthropic publishes a practice test on the certification page</td>
+      <td><span class="tier t1">official</span></td>
+      <td>The 12 guide samples are drawn from it. <b>Take it early</b> for a baseline.</td></tr>
+  </table>
+  </div>
+
+  <p class="sect">Third-party resources, ranked</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Resource</th><th>Tier</th><th>Verdict</th></tr>
+    <tr><td><a href="https://anthropic-partners.skilljar.com/claude-certified-architect-foundations-certification">Anthropic practice test + Exam Guide</a></td>
+      <td><span class="tier t1">official</span></td>
+      <td><b>Do this.</b> Written by the exam authors. Nothing else is equivalent.</td></tr>
+    <tr><td><a href="https://anthropic.skilljar.com/">Anthropic Academy free courses</a></td>
+      <td><span class="tier t1">official</span></td>
+      <td>Free. MCP intro/advanced, Subagents, Agent Skills, Claude Code modules.</td></tr>
+    <tr><td><a href="https://github.com/daronyondem/claude-architect-exam-guide">daronyondem community guide</a></td>
+      <td><span class="tier t2">community</span></td>
+      <td>Free, open, "what to know" + "common pitfalls" per topic. PDF/EPUB releases. Explicitly not Anthropic-endorsed; contains no real items.</td></tr>
+    <tr><td><a href="https://glama.ai/mcp/servers/Connectry-io/connectrylab-architect-cert-mcp">architect-cert MCP server</a></td>
+      <td><span class="tier t2">community</span></td>
+      <td>390 scenario questions across all 30 task statements, SM-2 spaced repetition, runs locally. Genuinely useful for question volume. <b>Not official</b> despite some search results implying otherwise.</td></tr>
+    <tr><td><a href="https://www.freecodecamp.org/news/claude-certified-architect-foundations-prep-for-anthropic-s-new-certification-exam/">freeCodeCamp 13-hour course</a></td>
+      <td><span class="tier t2">community</span></td>
+      <td>Free video course. Too long for a 2–3 week plan; use for a specific weak domain only.</td></tr>
+    <tr><td>Udemy practice-exam courses (several)</td>
+      <td><span class="tier t3">paid</span></td>
+      <td>Question volume of unverified accuracy. Only if you exhaust free banks — and never let one override the Exam Guide.</td></tr>
+    <tr><td>Whizlabs / TutorialsDojo guides</td>
+      <td><span class="tier t3">paid</span></td>
+      <td>Competent summaries, nothing the Exam Guide lacks.</td></tr>
+    <tr><td>"Exam dumps" sites</td>
+      <td><span class="tier t3">avoid</span></td>
+      <td>You sign an NDA before the exam. Also frequently wrong.</td></tr>
+  </table>
+  </div>
+
+  <div class="warn">
+    <span class="warn-label">Verify before you trust</span>
+    <p>Several widely-shared community write-ups state the domains incorrectly — merging Prompt
+    Engineering with Context Management, or using an obsolete four-domain framing. One of the two
+    study guides already on your machine
+    (<code>certification-preparation/claude-certified-architect/</code>) has this problem. When
+    a third-party source and the Exam Guide disagree, the Exam Guide is right.</p>
+  </div>
+
+  <p class="sect">Exam-day mechanics worth rehearsing</p>
+  <ul>
+    <li><b>120 minutes, 60 items = 2 minutes each.</b> Scenario text is shared across a group of
+      questions, so budget more for the first item under each scenario and less thereafter.</li>
+    <li><b>4 scenarios drawn from 6.</b> You cannot predict which; prepare all six contexts.</li>
+    <li><b>Read the qualifier.</b> "First step", "most effective", "select two" all change the
+      answer. Multiple-response items state how many to pick.</li>
+    <li><b>Closed book, proctored.</b> Clear desk, no phone, no second monitor, government photo
+      ID matching your registration exactly.</li>
+    <li><b>Free reschedule</b> up to 24 hours before. Inside 24 hours you forfeit the fee.</li>
+    <li><b>Domain percentages on your score report are informational.</b> Only the total scaled
+      score decides pass/fail — so do not sacrifice a strong domain to shore up a weak one.</li>
+  </ul>
+
+  <div class="source">
+    <span class="source-label">Sources</span>
+    <p><a href="exam-guide-v1.0.pdf">Exam Guide v1.0 §7–8</a> ·
+    <a href="https://tutorialsdojo.com/ccar-f-claude-certified-architect-foundations-study-guide/">TutorialsDojo study guide</a> ·
+    <a href="https://www.whizlabs.com/blog/cca-f-exam-guide/">Whizlabs CCA-F guide</a> ·
+    <a href="https://github.com/daronyondem/claude-architect-exam-guide">daronyondem guide</a> ·
+    <a href="https://dev.to/aws-builders/the-claude-certified-architect-exam-5-domains-6-scenarios-and-everything-you-need-to-know-4le3">DEV: 5 domains, 6 scenarios</a></p>
+    <p style="margin-top:.5rem;font-size:.85rem;color:var(--ink-faint)">Note: medium.com is
+    unreachable from your network (ISP DNS block), so several first-hand exam write-ups could not
+    be read directly and are represented via search summaries only.</p>
+  </div>
+
+  <div class="foot">
+    <p><b>Reference 02</b> · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="00-exam-blueprint.html">Ref 00 — Blueprint</a>
+      <a href="01-api-mechanics.html">Ref 01 — API mechanics</a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

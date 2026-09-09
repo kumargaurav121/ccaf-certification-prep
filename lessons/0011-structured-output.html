@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 11 — Structured Output</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 4 · Lesson 11 of 16</p>
+  <h1>Structured Output</h1>
+  <p class="standfirst">"Please respond in JSON" is a request. A tool schema is a contract. The
+  trick at the heart of Domain 4: you don't ask Claude to <em>write</em> JSON — you define a tool
+  whose input <em>is</em> your schema, and let the tool-calling machinery guarantee the shape.</p>
+
+  <div class="meta">
+    <span><b>Domain 4</b> Prompt Engineering &amp; Structured Output · 20%</span>
+    <span><b>Covers</b> TS 4.3</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. The extraction-tool trick</h2>
+
+  <p>Prompting for JSON in a text response fails in familiar ways: a chatty preamble before the
+  brace, a trailing comma, markdown fences around the payload. Parsing prose-adjacent JSON is a
+  tax you pay on every call.</p>
+
+  <p>The reliable approach <span class="ts">TS 4.3</span> inverts it. Define a tool whose
+  <code>input_schema</code> is the shape you want, and read the data out of the
+  <code>tool_use</code> block's <code>input</code>:</p>
+
+<pre><code>tools = [{
+    "name": "record_invoice",
+    "description": "Record the structured data extracted from an invoice.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "invoice_number": {"type": "string"},
+            "vendor":         {"type": "string"},
+            "total":          {"type": "number"},
+            "due_date":       {"type": ["string", "null"],
+                               "description": "ISO 8601; null if not stated"},
+            "category": {
+                "enum": ["utilities", "software", "travel", "other"]
+            },
+            "category_detail": {"type": ["string", "null"],
+                               "description": "Required when category is 'other'"}
+        },
+        "required": ["invoice_number", "vendor", "total"]
+    }
+}]
+
+response = client.messages.create(
+    model="claude-opus-5", max_tokens=1024,
+    tools=tools,
+    tool_choice={"type": "tool", "name": "record_invoice"},
+    messages=[{"role": "user", "content": f"Extract from:\n{document}"}],
+)
+data = next(b for b in response.content if b.type == "tool_use").input</code></pre>
+
+  <p>The tool doesn't exist. Nothing executes. <code>record_invoice</code> is a schema wearing a
+  tool costume — the "call" <em>is</em> the output. And because tool arguments are generated
+  under the schema, <b>JSON syntax errors are eliminated</b>: no fences, no preamble, no trailing
+  commas. Add <code>strict: true</code> to the definition and conformance to the schema is
+  guaranteed exactly.</p>
+
+  <h2>2. What the schema cannot do</h2>
+
+  <div class="key">
+    <span class="key-label">The line the exam draws</span>
+    <p>Schemas eliminate <b>syntax</b> errors, not <b>semantic</b> ones. A response can validate
+    perfectly and still be wrong: line items that don't sum to the stated total, a billing
+    address in the shipping field, a date that exists nowhere in the document. The schema checks
+    <em>shape</em>; it cannot check <em>truth</em>.</p>
+  </div>
+
+  <p>This distinction runs the whole domain. Syntax errors → solved structurally, by tool use.
+  Semantic errors → need <em>validation</em> after extraction and <em>retry loops</em> with error
+  feedback — which is Lesson 13. If an exam option claims a stricter schema will fix values
+  landing in the wrong fields, it is wrong; that failure validates fine.</p>
+
+  <h2>3. <code>tool_choice</code> for extraction</h2>
+
+  <p>You met the mechanics in L05; here is how they map to extraction pipelines
+  <span class="ts">TS 4.3</span>:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Situation</th><th>Setting</th><th>Why</th></tr>
+    <tr><td>One known document type</td>
+      <td>Forced: <code>{"type":"tool","name":"record_invoice"}</code></td>
+      <td>That schema, every time — no discretion needed</td></tr>
+    <tr><td>Several schemas, document type unknown</td>
+      <td><code>{"type":"any"}</code></td>
+      <td>Structured output guaranteed; the model picks which schema fits</td></tr>
+    <tr><td>A specific step must run first</td>
+      <td>Forced on that step, then relax</td>
+      <td>e.g. <code>extract_metadata</code> before enrichment tools</td></tr>
+  </table>
+  </div>
+
+  <p>The hole <code>auto</code> leaves open, one more time: the model may return conversational
+  text with no tool call, and a pipeline that parses <code>tool_use</code> blocks crashes.
+  Extraction pipelines never run on <code>auto</code>.</p>
+
+  <h2>4. Nullable fields: the anti-hallucination device</h2>
+
+  <p>The subtlest and most-tested schema decision. Mark a field <code>required</code> and
+  non-nullable, and you have <em>ordered</em> the model to produce a value — <b>even when the
+  document doesn't contain one</b>. The model complies the only way it can: it fabricates
+  something plausible.</p>
+
+  <div class="pair">
+    <div class="dont">
+      <h4>Required everywhere</h4>
+      <p><code>"due_date"</code> required, non-nullable. Invoice has no due date. The model
+      invents one — plausible, well-formatted, <em>validating</em>, and false. The schema
+      manufactured the hallucination.</p>
+    </div>
+    <div class="do">
+      <h4>Nullable where absence is possible</h4>
+      <p><code>"type": ["string", "null"]</code> with "null if not stated" in the description.
+      Absence now has a legal representation, and the model uses it. Truly-always-present fields
+      stay required.</p>
+    </div>
+  </div>
+
+  <p>Two companion patterns from the blueprint:</p>
+  <ul>
+    <li><b>Enum + "other" + detail string.</b> A closed enum forces every oddball into the
+      nearest wrong bucket. Adding <code>"other"</code> plus a <code>category_detail</code> field
+      keeps categories extensible without losing information — and an <code>"unclear"</code>
+      value gives genuinely ambiguous cases an honest home instead of a coin flip.</li>
+    <li><b>Normalisation rules ride in the prompt, not the schema.</b> Source documents write
+      dates five ways; the schema wants ISO 8601. JSON Schema cannot express "convert
+      '3rd March 26' to 2026-03-03" — so format rules go in the prompt <em>alongside</em> the
+      strict schema. Prompt handles messy input; schema locks clean output.</li>
+  </ul>
+
+  <div class="note">
+    <span class="note-label">Where this goes next</span>
+    <p>The schema now guarantees shape and honest absence. What it can't guarantee — precision,
+    consistency, judgement on ambiguous cases — is prompt work: explicit criteria and few-shot
+    examples. That's Lesson 12.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools">Define
+    tools</a> and <a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/strict-tool-use">Strict
+    tool use</a> (Claude platform docs). If you build one thing this week, make it the extraction
+    tool from section 1 against three real invoices — one of which has no due date. Watching
+    <code>null</code> come back where fabrication used to be is the lesson.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> The question that separates surface from depth
+    here: <em>"why does making a field required cause hallucination rather than an error?"</em>
+    If your answer involves what the model is optimising for during constrained generation,
+    you've got it.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 11</b> · Domain 4 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0010-refinement-and-cicd.html">← L10 Refinement &amp; CI/CD</a>
+      <a href="../reference/01-api-mechanics.html">Ref 01 — API mechanics</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L11-structured-output',
+  title: 'Retrieval check — structured output',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Structured Data Extraction — a system pulling structured records out of unstructured documents, validating with JSON schemas, feeding downstream systems.',
+      ts: 'TS 4.3',
+      stem: 'Why is defining an extraction tool with a JSON input_schema more reliable than instructing Claude to "respond only with valid JSON matching this format"?',
+      options: [
+        'Tool arguments are generated under the schema itself, eliminating syntax errors, fences and preamble text structurally.',
+        'Tool definitions are processed at a higher priority than user instructions, so the format requirement cannot be forgotten.',
+        'The tool result is validated server-side by Anthropic and automatically regenerated whenever validation fails against it.',
+        'Instructed JSON counts against output tokens while tool arguments do not, leaving more budget for the extraction itself.'
+      ],
+      answer: 0,
+      why: 'The mechanism is structural: the "call" is the output, generated under the schema — with strict: true, conformance is guaranteed exactly. A prompt instruction is a request the model usually honours; a schema is a constraint on generation itself.',
+      trap: 'Option C invents server-side validation-and-retry — there is none; validating semantics is your job (L13). Options B and D invent priority tiers and token exemptions.'
+    },
+    {
+      ts: 'TS 4.3',
+      stem: 'Your invoice extractions validate against a strict schema, yet some records have line items that do not sum to the stated total. What does this demonstrate?',
+      options: [
+        'Schemas eliminate syntax errors but not semantic ones — a value can fit the shape and still be wrong.',
+        'The schema is under-constrained and needs a computed-sum field with a numeric range restriction added.',
+        'strict mode is not enabled, since strict schemas verify arithmetic relationships between numeric fields.',
+        'The model is truncating long invoices, and raising max_tokens will restore the missing line items.'
+      ],
+      answer: 0,
+      why: 'This is the domain’s central line: shape versus truth. Items-don’t-sum is the blueprint’s own example of a semantic error — it validates perfectly. The fix is post-extraction validation with retry feedback (L13), not more schema.',
+      trap: 'Options B and C imagine JSON Schema can express cross-field arithmetic — it cannot, at any strictness. An exam option promising schema fixes for semantic failures is always wrong.'
+    },
+    {
+      ts: 'TS 4.3',
+      stem: 'Documents of unknown type arrive — invoices, receipts, purchase orders — each with its own extraction tool. The pipeline parses tool_use blocks and must never receive prose. Which tool_choice?',
+      options: [
+        '"any" — a tool call is guaranteed, and the model selects whichever extraction schema fits the document.',
+        'Forced selection of the invoice tool, the most common type, with the others left available as fallbacks.',
+        '"auto" with a firm instruction that the model must always call exactly one of the extraction tools.',
+        '"any" with disable_parallel_tool_use unset, so multiple schemas can be attempted simultaneously for safety.'
+      ],
+      answer: 0,
+      why: 'The blueprint names this exactly: tool_choice "any" guarantees structured output when multiple extraction schemas exist and the document type is unknown. Guarantee the call; delegate the choice.',
+      trap: 'Option C is L03 again — a prompt instruction where a parameter gives determinism; auto can still return prose. Option B forces the wrong schema onto two-thirds of the documents.'
+    },
+    {
+      ts: 'TS 4.3',
+      stem: 'A required, non-nullable "due_date" field produces plausible dates for invoices that state none. What is the mechanism, and the fix?',
+      options: [
+        'The schema demands a value the source lacks, so the model fabricates one; make the field nullable so absence is representable.',
+        'The model confuses issue dates with due dates when documents are ambiguous; add a disambiguating description to each field.',
+        'The temperature is too high for extraction work, producing invented values; lower it so the model stays closer to the source.',
+        'The document exceeds the context window, so the date is being guessed from truncated text; chunk the input before extracting.'
+      ],
+      answer: 0,
+      why: 'A required field is an order to produce a value — when the document has none, compliance means fabrication. Nullable fields give absence a legal representation, and the model prefers the honest null once it exists. The schema itself manufactured this hallucination.',
+      trap: 'Option B addresses a real but different failure — the stem says the documents state no due date at all, so no description un-confuses anything. The fabricated dates are plausible and validating, which is what makes this failure dangerous.'
+    },
+    {
+      ts: 'TS 4.3',
+      stem: 'Your expense categories are a closed enum, and unusual expenses keep landing in the nearest wrong category. What is the blueprint’s schema pattern?',
+      options: [
+        'Add an "other" enum value plus a detail string field, and an "unclear" value for genuinely ambiguous cases.',
+        'Remove the enum constraint and let the category be free text, then normalise the values in post-processing.',
+        'Expand the enum until every expense type observed in production has its own precisely named category.',
+        'Have the model return its top two candidate categories with confidence scores and pick the higher one.'
+      ],
+      answer: 0,
+      why: 'Enum + "other" + detail keeps the taxonomy stable while giving oddballs an honest home with their information preserved; "unclear" does the same for ambiguity. Closed enums with no escape valve force lies at the margins.',
+      trap: 'Option B trades one problem for a worse one — free text fragments into dozens of spellings per category. Option C chases a moving target; next month brings a new oddball.'
+    },
+    {
+      ts: 'TS 4.3',
+      stem: 'Source documents write dates as "3/4/26", "March 4th, 2026" and "04-03-2026", but downstream systems require ISO 8601. Where does the normalisation logic belong?',
+      options: [
+        'In the prompt, as explicit format rules alongside the strict output schema that locks the final shape.',
+        'In the schema, as a regex pattern on the date field so that non-ISO values fail validation and retry.',
+        'In post-processing code, since date parsing is deterministic and should never be delegated to a model.',
+        'In a PostToolUse hook that rewrites whatever date format the extraction happens to produce each run.'
+      ],
+      answer: 0,
+      why: 'The blueprint’s split: include format normalisation rules in prompts alongside strict output schemas. The schema cannot express conversions — it locks the clean output while the prompt handles messy input.',
+      trap: 'Option C sounds like good engineering but breaks on exactly this input: "3/4/26" is ambiguous (March 4th or April 3rd?) and resolving it needs the document’s context — which is why the model, reading that context, does the normalising. A regex (B) can reject bad output but cannot convert anything.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

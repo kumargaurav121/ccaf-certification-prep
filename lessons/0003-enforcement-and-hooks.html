@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 03 — Enforcement &amp; Hooks</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<style>
+  .diag {
+    font-family: var(--mono); font-size: .76rem; line-height: 1.7;
+    background: var(--code-bg); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 1.2rem; margin: 1.5rem 0; overflow-x: auto;
+    white-space: pre; color: var(--ink-soft);
+  }
+  .diag b { color: var(--accent); font-weight: 600; }
+  .diag u { color: var(--bad); text-decoration: none; font-weight: 600; }
+  .diag i { color: var(--good); font-style: normal; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 1 · Lesson 03 of 16</p>
+  <h1>Enforcement &amp; Hooks</h1>
+  <p class="standfirst">A prompt is a request. A hook is a guarantee. Knowing which of those a
+  given business rule requires is the most frequently tested judgement in Domain 1 — and the
+  answer is not always "hook".</p>
+
+  <div class="meta">
+    <span><b>Domain 1</b> Agentic Architecture &amp; Orchestration · 27%</span>
+    <span><b>Covers</b> TS 1.4, TS 1.5</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. Probabilistic versus deterministic compliance</h2>
+
+  <p>Everything in this lesson descends from one fact: <b>a system prompt instruction has a
+  non-zero failure rate.</b> Not a high one. But if you tell an agent "always verify the customer
+  before issuing a refund", it will comply almost always — and "almost always" is a different
+  engineering category from "always".</p>
+
+  <p>The blueprint puts it plainly <span class="ts">TS 1.4</span>: when deterministic compliance is
+  required, prompt instructions alone are insufficient. Whether 99% compliance is acceptable
+  depends entirely on what the 1% costs.</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th></th><th>Prompt-based guidance</th><th>Programmatic enforcement</th></tr>
+    <tr><td><b>Mechanism</b></td><td>System prompt, few-shot examples</td><td>Hooks, prerequisite gates</td></tr>
+    <tr><td><b>Compliance</b></td><td class="no">Probabilistic</td><td class="yes">Deterministic</td></tr>
+    <tr><td><b>Handles</b></td><td>Judgement, tone, boundaries, priorities</td><td>Invariants, sequences, thresholds</td></tr>
+    <tr><td><b>Cost of failure it suits</b></td><td>Recoverable — a slightly worse answer</td><td>Unrecoverable — money moved, data deleted</td></tr>
+  </table>
+  </div>
+
+  <div class="key">
+    <span class="key-label">The test to apply</span>
+    <p>Ask: <b>can I write a deterministic check for this?</b> "Has <code>get_customer</code>
+    returned a verified ID?" — yes, that is a boolean. Enforce it. "Is this case too complex to
+    handle autonomously?" — no, that is a judgement with no checkable definition. Teach it with
+    criteria and examples instead.</p>
+    <p style="margin-top:.6rem">Reaching for a hook where judgement is required does not make the
+    judgement deterministic; it just moves the guesswork into your code.</p>
+  </div>
+
+  <h2>2. Prerequisite gates</h2>
+
+  <p>The canonical example, straight from the exam's support scenario: production data shows the
+  agent sometimes calls <code>lookup_order</code> using only a customer's stated name, skipping
+  <code>get_customer</code> — and occasionally refunds the wrong account.</p>
+
+  <p>A prerequisite gate blocks downstream tool calls until an upstream step has completed
+  <span class="ts">TS 1.4</span>:</p>
+
+  <div class="diag">agent wants: <b>process_refund</b>(order_id, amount)
+                    │
+                    ▼
+        ┌───────────────────────┐
+        │  <b>PreToolUse gate</b>       │  has get_customer returned
+        │  verified_customer_id? │  a verified ID this session?
+        └───────────┬───────────┘
+              no ───┴─── yes
+               │          │
+        <u>DENY + reason</u>    <i>ALLOW → tool runs</i>
+               │
+   model sees the denial reason and
+   calls get_customer first instead</div>
+
+  <p>Note what the denial does: it does not crash. The block returns a <em>reason</em>, the model
+  reads it, and self-corrects by calling the prerequisite. You are constraining the space of legal
+  actions, not fighting the model.</p>
+
+  <h2>3. Hooks: the mechanism</h2>
+
+  <p>Hooks are callbacks that run your code at fixed points in the agent lifecycle. Two matter for
+  the exam <span class="ts">TS 1.5</span>:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Event</th><th>Fires</th><th>Can</th><th>Exam use</th></tr>
+    <tr><td><code>PreToolUse</code></td><td>Before a tool runs</td><td class="yes">Block or modify the call</td>
+      <td>Enforce policy — block refunds over $500 and redirect to escalation</td></tr>
+    <tr><td><code>PostToolUse</code></td><td>After a tool returns</td><td class="yes">Transform the result</td>
+      <td>Normalise heterogeneous data before the model reads it</td></tr>
+  </table>
+  </div>
+
+  <p>Hooks are registered per event with a <code>matcher</code> on the tool name. MCP tools match
+  the pattern <code>mcp__&lt;server&gt;__&lt;action&gt;</code>.</p>
+
+  <h3>Blocking with <code>PreToolUse</code></h3>
+
+<pre><code>async def block_large_refunds(input_data, tool_use_id, context):
+    if input_data["tool_name"] == "process_refund":
+        if input_data["tool_input"]["amount"] &gt; 500:
+            return {"hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny",
+                "permissionDecisionReason":
+                    "Refunds above $500 require human approval. "
+                    "Use escalate_to_human with a handoff summary.",
+            }}
+    return {}
+
+options = ClaudeAgentOptions(
+    hooks={"PreToolUse": [HookMatcher(matcher="process_refund",
+                                      hooks=[block_large_refunds])]}
+)</code></pre>
+
+  <p><code>permissionDecision</code> takes <code>"allow"</code>, <code>"deny"</code>,
+  <code>"ask"</code> or <code>"defer"</code>. When several hooks apply,
+  <b><code>deny</code> beats <code>defer</code> beats <code>ask</code> beats
+  <code>allow</code></b> — any single <code>deny</code> blocks the operation. A
+  <code>PreToolUse</code> hook can also rewrite the call via <code>updatedInput</code> rather than
+  refusing it outright.</p>
+
+  <h3>Normalising with <code>PostToolUse</code></h3>
+
+  <p>The blueprint's example: your MCP tools come from different backend teams. One returns Unix
+  timestamps, one ISO 8601, one numeric status codes. The agent now has to reason across three
+  formats, and it will occasionally get it wrong.</p>
+
+  <p>Fixing this in the prompt is the wrong instinct — you would be asking the model to do
+  deterministic data conversion on every turn, forever, at some error rate. A
+  <code>PostToolUse</code> hook converts the result <em>before the model ever sees it</em>, using
+  <code>updatedToolOutput</code> to replace the output (or <code>additionalContext</code> to
+  append to it).</p>
+
+  <div class="pair">
+    <div class="dont">
+      <h4>Prompt-based</h4>
+      <p>"Note that <code>get_orders</code> returns Unix timestamps while <code>lookup_shipment</code>
+      returns ISO 8601. Convert as needed." Burns tokens every turn, and fails occasionally
+      forever.</p>
+    </div>
+    <div class="do">
+      <h4>Hook-based</h4>
+      <p>One <code>PostToolUse</code> hook normalises every timestamp to ISO 8601. The model sees
+      one format and never knows there was a problem. Correct 100% of the time.</p>
+    </div>
+  </div>
+
+  <h2>4. Structured handoff on escalation</h2>
+
+  <p>When an agent escalates mid-process, the human receiving it <b>has no access to the
+  conversation transcript</b> <span class="ts">TS 1.4</span>. A handoff that says "customer is
+  unhappy about a refund" forces that human to redo the entire investigation.</p>
+
+  <p>A structured handoff carries what the investigation already established:</p>
+
+<pre><code>{
+  "customer_id": "CUS-88213",
+  "root_cause": "Duplicate charge from a retried payment webhook",
+  "amount": 149.98,
+  "verified": true,
+  "steps_taken": ["identity verified", "both charges confirmed in ledger"],
+  "recommended_action": "Refund the duplicate charge of $74.99",
+  "escalation_reason": "Amount exceeds agent authority threshold"
+}</code></pre>
+
+  <p>This is the same instinct as the <code>PostToolUse</code> normaliser and, later, structured
+  error responses: <b>preserve structure across a boundary, because whoever is on the other side
+  cannot see what you saw.</b></p>
+
+  <h2>5. Multi-concern requests</h2>
+
+  <p>One more TS 1.4 skill, easily missed. Real customers send messages containing several
+  problems at once: "my order arrived damaged, I was charged twice, and I want to change my
+  address."</p>
+
+  <p>The pattern is <b>decompose → investigate in parallel using shared context → synthesise one
+  unified resolution</b>. Not three separate replies, and not one blurred reply that half-answers
+  everything. Note this reuses the parallel tool-call mechanics from
+  <a href="0002-coordinator-and-subagents.html">Lesson 02</a>: independent investigations issued
+  together, results merged afterwards.</p>
+
+  <div class="note">
+    <span class="note-label">Connecting the domain</span>
+    <p>You now have Domain 1's spine: the loop (L01), delegation across contexts (L02), and
+    guarantees over probabilistic behaviour (L03). Lesson 04 closes the domain with <em>when to
+    decompose at all</em> — fixed prompt chains versus adaptive decomposition — and session
+    lifecycle: <code>--resume</code>, <code>fork_session</code>, and when starting fresh beats
+    resuming.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://code.claude.com/docs/en/agent-sdk/hooks">Intercept and control agent
+    behavior with hooks</a> (Claude Code docs). Read "Available hooks" and "Hook output" —
+    the precedence rule (<code>deny</code> &gt; <code>defer</code> &gt; <code>ask</code> &gt;
+    <code>allow</code>) and the <code>hookSpecificOutput</code> shape are the parts worth
+    knowing precisely. The full event list is much longer than the two the exam tests; do not
+    memorise it.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> The sharpest question here is
+    <em>"where exactly is the line between an invariant and a judgement?"</em> — because the exam
+    puts two near-identical support scenarios on opposite sides of it. If that boundary feels
+    fuzzy, say so and I'll drill it with contrasting cases.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 03</b> · Domain 1 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0002-coordinator-and-subagents.html">← L02 Coordinator &amp; Subagents</a>
+      <a href="../reference/01-api-mechanics.html">Ref 01 — API mechanics</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L03-enforcement-hooks',
+  title: 'Retrieval check — enforcement &amp; hooks',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Customer Support Resolution Agent — MCP tools get_customer, lookup_order, process_refund, escalate_to_human.',
+      ts: 'TS 1.4',
+      stem: 'Production data shows that in 12% of cases the agent calls lookup_order using only the customer’s stated name, skipping get_customer, occasionally refunding the wrong account. Which change addresses this?',
+      options: [
+        'A programmatic prerequisite that blocks lookup_order and process_refund until get_customer has returned a verified customer ID.',
+        'A system prompt instruction stating that customer verification through get_customer is mandatory before any order operation runs.',
+        'Few-shot examples in the system prompt showing the agent calling get_customer first even when the customer volunteers order details.',
+        'A routing classifier that inspects each request and exposes only the subset of tools appropriate to that particular request type.'
+      ],
+      answer: 0,
+      why: 'A required sequence guarding a financial operation is an invariant — you can write a deterministic check for "has get_customer returned a verified ID". Prompt instructions and few-shot examples both give probabilistic compliance, which is the wrong category when the failure moves money.',
+      trap: 'Option D changes which tools are available, but the failure is about the order they are called in. An agent with only the right tools can still call them in the wrong sequence.'
+    },
+    {
+      ts: 'TS 1.5',
+      stem: 'Three MCP tools return dates differently: Unix epoch integers, ISO 8601 strings, and numeric status codes. The agent occasionally misreads them when reasoning across tools. What is the appropriate fix?',
+      options: [
+        'A PostToolUse hook that normalises each tool’s output to one format before the model reads the result.',
+        'A system prompt section documenting each tool’s date format and instructing Claude to convert between them.',
+        'A PreToolUse hook that rewrites each request so the backing service returns dates in a single agreed format.',
+        'A separate normalisation tool the agent is instructed to call after each of the three tools returns data.'
+      ],
+      answer: 0,
+      why: 'Format conversion is deterministic, so it belongs in code that runs every time rather than in a model instruction that runs correctly most times. PostToolUse fires after the tool returns and can replace the output via updatedToolOutput, so the model only ever sees one format.',
+      trap: 'Option C is the right idea at the wrong point in the lifecycle — PreToolUse fires before execution, when there is no output to normalise, and you generally cannot dictate a third-party service’s response format. Option D adds a round trip per call and still relies on the model remembering to make it.'
+    },
+    {
+      ts: 'TS 1.5',
+      stem: 'A PreToolUse hook returns permissionDecision: "deny" with a reason when a refund exceeds $500. What happens next?',
+      options: [
+        'The tool call is blocked and the model receives the reason, letting it choose an alternative such as escalation.',
+        'The session terminates with an error, because a denied tool call cannot be recovered from within the agent loop.',
+        'The tool call executes anyway and the denial is recorded in the audit log for later compliance review.',
+        'The model is forced to retry the identical call until a hook eventually returns an allow decision instead.'
+      ],
+      answer: 0,
+      why: 'A denial constrains the legal action space without crashing. The model reads permissionDecisionReason and self-corrects — which is why the reason string should name the alternative workflow, e.g. "use escalate_to_human with a handoff summary".',
+      trap: 'Option B confuses blocking with failing. The point of the gate is to redirect behaviour, not to end the session — an agent that dies whenever it attempts a disallowed action is unusable.'
+    },
+    {
+      ts: 'TS 1.4',
+      stem: 'An agent escalates a billing dispute to a human who has no access to the conversation transcript. What should the handoff contain?',
+      options: [
+        'Customer ID, root cause, amount, steps already taken, and a recommended action for the human to approve.',
+        'The complete conversation transcript verbatim, so the human can form an independent judgement of the case.',
+        'A brief summary of the customer’s emotional state and urgency, so the human can prioritise the queue correctly.',
+        'The list of tools the agent called and their raw responses, so the human can verify the agent behaved correctly.'
+      ],
+      answer: 0,
+      why: 'The human is picking up mid-process and cannot see what the agent saw. A structured handoff carries the conclusions of the investigation — identity, root cause, amount, what was done, what should happen next — so the work is not repeated.',
+      trap: 'Option D is the closest wrong answer: raw tool responses preserve information but not conclusions, leaving the human to redo the analysis. Structure means the findings, not the trace.'
+    },
+    {
+      ts: 'TS 1.4',
+      stem: 'Which of these business rules are appropriate for programmatic enforcement rather than prompt-based guidance? (Select 2.)',
+      options: [
+        'Refunds above a fixed monetary threshold must never be issued without human approval.',
+        'Identity verification must always complete before any order modification tool is called.',
+        'The agent should escalate when a customer’s situation is unusually complex or unclear.',
+        'The agent should adopt a warmer tone when a customer expresses frustration in a message.'
+      ],
+      answer: [0, 1],
+      why: 'A fixed threshold and a required sequence are both checkable booleans, so they can be guaranteed in code. Options C and D are judgements — "unusually complex" and "warmer tone" have no deterministic definition, so they belong in explicit criteria and few-shot examples.',
+      trap: 'Option C feels enforceable because it sounds like a rule, and escalation does have real consequences. But you cannot write the check: deciding whether a case is complex is exactly the judgement you would be trying to encode.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

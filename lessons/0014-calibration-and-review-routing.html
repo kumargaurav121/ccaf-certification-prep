@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 14 — Calibration &amp; Review Routing</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<link rel="stylesheet" href="../assets/diagram.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 5 · Lesson 14 of 16 · pulled forward — your #1 mock gap</p>
+  <h1>Calibration &amp; Review Routing</h1>
+  <p class="standfirst">Mock 1 verdict: five of your six Domain-5 misses were this one task
+  statement. The whole of TS 5.5 is a single question asked four ways: <em>when can a machine's
+  confidence be trusted to decide what a human doesn't look at?</em> Answer: only after you've
+  measured it.</p>
+
+  <div class="meta">
+    <span><b>Domain 5</b> Context Management &amp; Reliability · 15%</span>
+    <span><b>Covers</b> TS 5.5 (+ TS 5.6 provenance)</span>
+    <span><b>Mock evidence</b> Q20 · Q26 · Q34 · Q42 · Q51 all missed</span>
+  </div>
+
+  <h2>1. The aggregate mask</h2>
+
+  <p>Every TS 5.5 stem starts the same way: a system reports a beautiful <b>overall</b> accuracy —
+  96%, 97% — and someone proposes automating on the strength of it. The trap: an aggregate is an
+  <em>average over segments you haven't looked at</em>.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 640 208" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A 96% aggregate accuracy bar hides per-field bars: party names 99%, dates 97%, amounts 95%, indemnification clauses only 71%.">
+      <text x="8" y="18" font-size="13" font-weight="600">Contract extraction — "96% accurate"</text>
+
+      <!-- aggregate bar -->
+      <text x="8" y="46" font-size="12" class="dim">Aggregate</text>
+      <rect x="150" y="34" width="400" height="16" rx="3" class="bar-track"/>
+      <rect x="150" y="34" width="384" height="16" rx="3" class="bar-good"/>
+      <text x="560" y="47" font-size="12" class="mono good-text">96%</text>
+
+      <line x1="8" y1="66" x2="632" y2="66" class="rule-line"/>
+      <text x="8" y="86" font-size="11" class="dim">…is an average over segments:</text>
+
+      <text x="8" y="110" font-size="12">Party names</text>
+      <rect x="150" y="98" width="400" height="13" rx="3" class="bar-track"/>
+      <rect x="150" y="98" width="396" height="13" rx="3" class="bar-good"/>
+      <text x="560" y="109" font-size="12" class="mono good-text">99%</text>
+
+      <text x="8" y="136" font-size="12">Dates</text>
+      <rect x="150" y="124" width="400" height="13" rx="3" class="bar-track"/>
+      <rect x="150" y="124" width="388" height="13" rx="3" class="bar-good"/>
+      <text x="560" y="135" font-size="12" class="mono good-text">97%</text>
+
+      <text x="8" y="162" font-size="12">Amounts</text>
+      <rect x="150" y="150" width="400" height="13" rx="3" class="bar-track"/>
+      <rect x="150" y="150" width="380" height="13" rx="3" class="bar-good"/>
+      <text x="560" y="161" font-size="12" class="mono good-text">95%</text>
+
+      <text x="8" y="188" font-size="12" font-weight="600">Indemnification</text>
+      <rect x="150" y="176" width="400" height="13" rx="3" class="bar-track"/>
+      <rect x="150" y="176" width="284" height="13" rx="3" class="bar-bad"/>
+      <text x="560" y="187" font-size="12" class="mono bad-text" font-weight="700">71% ⚠</text>
+    </svg>
+    <p class="cap">the segment a lawyer actually cares about is the one the aggregate hides</p>
+  </div>
+
+  <p>Read the picture slowly, because every TS 5.5 question lives inside it. The system processed
+  contracts and someone measured accuracy <em>once, over everything</em> — that single number is
+  the <b>aggregate</b>. But the work is not uniform: extracting a party's name is easy (it looks
+  the same in every contract), while extracting an indemnification clause is hard (dense legal
+  prose, varied wording). Easy fields are plentiful, so their 99% dominates the average, and the
+  71% field disappears into it. A <b>segment</b> is any slice you could measure separately —
+  by field (names vs clauses), or by document type (invoices vs receipts vs purchase orders).</p>
+
+  <p>So the first calibration rule <span class="ts">TS 5.5</span>: <b>verify accuracy by document
+  type and by field segment before automating anything.</b> "97% overall" is compatible with a
+  40% error rate on one document type — and automation applied on the aggregate silently ships
+  that 40%. The aggregate isn't false. It's just answering a question nobody asked — "how good
+  are we on average?" — when the decision at hand is "which slices are safe to automate?"</p>
+
+  <div class="warn">
+    <span class="warn-label">The trap you fell into on Q26 and Q34</span>
+    <p>Both times you picked the <b>over-conservative</b> option: "always human-review everything",
+    "expand the review team". These feel safe, but the exam marks them wrong for a stated reason:
+    <b>they ignore the actual proposal's flaw</b> (uncalibrated aggregate metrics) and abandon a
+    legitimate goal (routing limited reviewer capacity where it matters). Rejecting automation
+    outright is as uncalibrated as accepting it blindly. The correct options always <em>fix the
+    measurement</em>, not the ambition.</p>
+  </div>
+
+  <h2>2. What the right answer looks like — and why it is right</h2>
+
+  <p>You said it directly: <em>"I still don't know what kind of answers to choose."</em> So here
+  is the rule, stated as a rule.</p>
+
+  <div class="key">
+    <span class="key-label">The right answer, every time</span>
+    <p>On every TS 5.5 automation question, the correct option is the one that
+    <b>keeps the automation goal AND adds measurement</b> — some combination of: validate
+    per segment · calibrate confidence against labelled data · keep a stratified sample under
+    review after automating. It is right because it is the only move that <em>answers the
+    question the decision actually needs</em>: "which slices are safe?" Every other option either
+    trusts an unmeasured number or abandons the goal.</p>
+  </div>
+
+  <p>Four option families appear on these questions, dressed differently each time. Learn to
+  sort every option into its family and the question answers itself:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Family</th><th>Sounds like</th><th>Verdict</th><th>Why</th></tr>
+    <tr>
+      <td><b>Add measurement</b></td>
+      <td>"calibrate per field on a labelled set", "validate by document type", "keep stratified samples under review"</td>
+      <td class="yes">CORRECT</td>
+      <td>Converts unmeasured claims into measured instruments; automation proceeds exactly where the data says it's safe</td>
+    </tr>
+    <tr>
+      <td><b>Trust the model</b></td>
+      <td>"auto-approve above 95% confidence", "have it self-assess and review the low-confidence ones"</td>
+      <td class="no">WRONG</td>
+      <td>Raw confidence is uncalibrated — the model is fluent and self-consistent even when factually wrong, so the number measures nothing yet</td>
+    </tr>
+    <tr>
+      <td><b>Abandon the goal</b></td>
+      <td>"always human-review everything", "expand the review team", "exclude that field entirely"</td>
+      <td class="no">WRONG</td>
+      <td>Feels safe, scores wrong: it ignores the stated constraint (limited reviewers) and fixes nothing — the measurement gap is still there</td>
+    </tr>
+    <tr>
+      <td><b>Twiddle the knob</b></td>
+      <td>"raise the threshold to 99%", "lower it until throughput recovers"</td>
+      <td class="no">WRONG</td>
+      <td>Adjusting an uncalibrated number is still trusting an uncalibrated number — you don't know what 99% means either</td>
+    </tr>
+  </table>
+  </div>
+
+  <h3>Worked, on the question you missed (mock Q26)</h3>
+
+  <p><em>"A structured data extraction system achieves 97% overall accuracy. The team proposes
+  automating all extractions where model confidence exceeds 95%. What is the critical risk?"</em></p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Option</th><th>Family</th><th>Verdict</th></tr>
+    <tr>
+      <td>"Aggregate accuracy can mask poor per-type performance, and confidence needs calibration before use"</td>
+      <td>Add measurement</td>
+      <td class="yes">✓ RIGHT — names both unmeasured numbers in the proposal (the 97% and the 95%) and what would make each trustworthy</td>
+    </tr>
+    <tr>
+      <td>"The model becomes overconfident over time, requiring retraining"</td>
+      <td>— (invented mechanism)</td>
+      <td class="no">✗ models don't train during inference; there is no drift here, only a calibration gap that existed from day one</td>
+    </tr>
+    <tr>
+      <td>"95% is too low — raise it to 99%"</td>
+      <td>Twiddle the knob</td>
+      <td class="no">✗ 99% of an uncalibrated scale is as meaningless as 95% of it</td>
+    </tr>
+    <tr>
+      <td>"Automation should always have human review regardless — the proposal is fundamentally flawed"</td>
+      <td>Abandon the goal</td>
+      <td class="no">✗ <b>your pick.</b> Automation is legitimate once validated — the flaw is doing it on uncalibrated aggregates, not the concept. Blanket rejection fixes no measurement and ignores the cost constraint</td>
+    </tr>
+  </table>
+  </div>
+
+  <p>Why the exam is built this way: the certification tests whether you can <b>hold the business
+  goal and the safety requirement at the same time</b>. "Trust the model" fails safety.
+  "Review everything" fails the goal. Measurement is the only option that satisfies both — which
+  is why it is always the key, and why the over-conservative option is manufactured to tempt
+  people who know the risks but not the instrument.</p>
+
+  <h2>3. The calibration pipeline</h2>
+
+  <p>Raw model confidence is a <em>claim</em>, not a measurement — you learned in L13 that it can
+  route nothing on its own. Calibration is what converts the claim into an instrument:</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 660 240" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Pipeline: extractions with field-level confidence flow to calibration against a labelled validation set, producing per-field thresholds that route each extraction to auto-approve or human review. Stratified sampling of auto-approved output feeds back into the labelled set.">
+      <defs>
+        <marker id="ar14" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+        </marker>
+      </defs>
+
+      <rect x="6" y="24" width="130" height="46" rx="6" class="box"/>
+      <text x="71" y="43" text-anchor="middle" font-size="11.5">Extractions +</text>
+      <text x="71" y="58" text-anchor="middle" font-size="11.5" class="mono">field confidence</text>
+
+      <line x1="136" y1="47" x2="188" y2="47" class="wire" marker-end="url(#ar14)"/>
+
+      <rect x="190" y="18" width="150" height="58" rx="6" class="accent-fill"/>
+      <text x="265" y="40" text-anchor="middle" font-size="11.5" font-weight="600" class="accent-text">CALIBRATE</text>
+      <text x="265" y="56" text-anchor="middle" font-size="10.5">against labelled</text>
+      <text x="265" y="69" text-anchor="middle" font-size="10.5">validation set</text>
+
+      <line x1="340" y1="47" x2="392" y2="47" class="wire" marker-end="url(#ar14)"/>
+
+      <rect x="394" y="24" width="128" height="46" rx="6" class="box"/>
+      <text x="458" y="43" text-anchor="middle" font-size="11.5">Per-field</text>
+      <text x="458" y="58" text-anchor="middle" font-size="11.5">thresholds</text>
+
+      <!-- routing split -->
+      <line x1="458" y1="70" x2="458" y2="100" class="wire"/>
+      <line x1="458" y1="100" x2="300" y2="130" class="wire" marker-end="url(#ar14)"/>
+      <line x1="458" y1="100" x2="590" y2="130" class="wire" marker-end="url(#ar14)"/>
+      <text x="330" y="102" font-size="10" class="dim">≥ threshold</text>
+      <text x="510" y="102" font-size="10" class="dim">&lt; threshold, or source ambiguous</text>
+
+      <rect x="196" y="132" width="180" height="44" rx="6" class="good-fill"/>
+      <text x="286" y="150" text-anchor="middle" font-size="11.5" font-weight="600" class="good-text">AUTO-APPROVE</text>
+      <text x="286" y="166" text-anchor="middle" font-size="10.5">high-volume path</text>
+
+      <rect x="500" y="132" width="150" height="44" rx="6" class="box-note"/>
+      <text x="575" y="150" text-anchor="middle" font-size="11.5" font-weight="600">HUMAN REVIEW</text>
+      <text x="575" y="166" text-anchor="middle" font-size="10.5">scarce, spent well</text>
+
+      <!-- feedback loop -->
+      <path class="wire dash" d="M 286 176 L 286 210 L 60 210 L 60 84" marker-end="url(#ar14)"/>
+      <text x="120" y="204" font-size="10.5" class="accent-text" font-weight="600">stratified random sample of auto-approved output</text>
+      <text x="120" y="226" font-size="10" class="dim">→ measured error rate + novel-pattern detection → refreshes the labelled set</text>
+    </svg>
+    <p class="cap">confidence claims → measured thresholds → routing — with sampling as the audit that never stops</p>
+  </div>
+
+  <p>Read the two arrows that answer your missed questions:</p>
+
+  <ul>
+    <li><b>Per-field thresholds (Q42).</b> The model reported <em>high confidence on both</em>
+      party names (99% actual) and indemnification clauses (71% actual). One global threshold
+      cannot serve both — calibration against labelled data is done <b>per field type</b>, and
+      that is what exposes the 71% field before automation ships it.</li>
+    <li><b>The dashed feedback loop (Q34, Q51).</b> Automation is never "done": a <b>stratified
+      random sample of high-confidence, auto-approved output stays under review forever</b>.
+      That sample is what measures the true error rate and catches <em>novel patterns</em> the
+      calibration never saw. Turning review fully off is the wrong reading of automation.</li>
+  </ul>
+
+  <h2>4. Spending scarce reviewers: stratify by risk</h2>
+
+  <p>Q20's scenario: 150 API doc pages, capacity to review perhaps 50. You picked
+  confidence-based self-routing — the unreliable proxy. The exam's answer allocates by
+  <b>consequence of error</b>, not by the model's self-assessment:</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 640 170" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Review allocation by risk: payment endpoints (regulatory risk) get 100% review; public data endpoints get 10%; internal tooling gets 5%.">
+      <text x="8" y="18" font-size="13" font-weight="600">150 pages, ~50 reviews — allocate by blast radius</text>
+
+      <text x="8" y="52" font-size="12" font-weight="600">Payment (30)</text>
+      <text x="8" y="66" font-size="10" class="dim">regulatory risk</text>
+      <rect x="170" y="42" width="330" height="18" rx="3" class="bar-track"/>
+      <rect x="170" y="42" width="330" height="18" rx="3" class="bar-bad"/>
+      <text x="512" y="56" font-size="12.5" class="mono bad-text" font-weight="700">100%  = 30</text>
+
+      <text x="8" y="98" font-size="12" font-weight="600">Public data (40)</text>
+      <text x="8" y="112" font-size="10" class="dim">external users</text>
+      <rect x="170" y="88" width="330" height="18" rx="3" class="bar-track"/>
+      <rect x="170" y="88" width="33" height="18" rx="3" class="bar-accent"/>
+      <text x="512" y="102" font-size="12.5" class="mono accent-text" font-weight="700">10%  = 4</text>
+
+      <text x="8" y="144" font-size="12" font-weight="600">Internal (80)</text>
+      <text x="8" y="158" font-size="10" class="dim">lowest blast radius</text>
+      <rect x="170" y="134" width="330" height="18" rx="3" class="bar-track"/>
+      <rect x="170" y="134" width="17" height="18" rx="3" class="bar-good"/>
+      <text x="512" y="148" font-size="12.5" class="mono good-text" font-weight="700">5%  = 4</text>
+    </svg>
+    <p class="cap">~38 reviews cover the risk. Confidence scores never enter this decision — risk tiers do.</p>
+  </div>
+
+  <p>This is the second meaning of "stratified" in TS 5.5, and the exam uses both: stratify
+  <b>review allocation</b> by risk tier (here), and stratify <b>the ongoing audit sample</b> by
+  document type and field (section 2). Same word, two instruments.</p>
+
+  <h2>5. Calibration has a domain of validity</h2>
+
+  <p>Q51: three months of well-calibrated 90% thresholds, then a client submits contracts in an
+  unusual two-column format. The system says 92% — above threshold. Trust it?</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 640 150" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Calibration is valid inside the distribution of the labelled set. A novel two-column format sits outside it, where reported confidence is untrustworthy.">
+      <defs>
+        <marker id="ar14b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+        </marker>
+      </defs>
+      <ellipse cx="240" cy="80" rx="200" ry="55" class="good-fill"/>
+      <text x="240" y="66" text-anchor="middle" font-size="11.5" font-weight="600" class="good-text">calibration's domain of validity</text>
+      <text x="240" y="84" text-anchor="middle" font-size="10.5">= formats represented in the labelled set</text>
+      <text x="240" y="102" text-anchor="middle" font-size="10.5" class="mono">92% means 92% here</text>
+
+      <rect x="500" y="52" width="126" height="56" rx="6" class="bad-fill"/>
+      <text x="563" y="72" text-anchor="middle" font-size="11" font-weight="600" class="bad-text">novel 2-column</text>
+      <text x="563" y="86" text-anchor="middle" font-size="11" font-weight="600" class="bad-text">format</text>
+      <text x="563" y="101" text-anchor="middle" font-size="9.5" class="mono">"92%" means nothing</text>
+
+      <line x1="497" y1="80" x2="445" y2="80" class="wire dash" marker-end="url(#ar14b)"/>
+      <text x="472" y="70" font-size="9.5" class="dim" text-anchor="middle">route to</text>
+      <text x="472" y="94" font-size="9.5" class="dim" text-anchor="middle">review until</text>
+      <text x="472" y="106" font-size="9.5" class="dim" text-anchor="middle">calibrated</text>
+    </svg>
+    <p class="cap">a threshold validated on one distribution says nothing about inputs from outside it</p>
+  </div>
+
+  <p><b>No.</b> A calibrated threshold is a measurement <em>of the formats in the labelled set</em>.
+  On a format the calibration never saw, the number "92%" is uncalibrated again — and the model
+  may be systematically overconfident precisely because it doesn't recognise its own
+  unfamiliarity. Correct handling: novel-format documents route to human review (building a
+  labelled sample) until calibration covers them. Note what's wrong with the tempting
+  alternative — raising the global threshold to 98% punishes the well-understood formats without
+  actually detecting format-specific failures.</p>
+
+  <h2>6. Provenance: the claim keeps its receipt</h2>
+
+  <p>Your one TS 5.6 miss (Q6) belongs to the same family — trust must be <em>traceable</em>.
+  In multi-source synthesis, the failure is <b>attribution loss</b>: findings get compressed
+  into summaries, and by the final report nobody can say which source supported which claim.</p>
+
+  <div class="pair">
+    <div class="dont">
+      <h4>Summary flattening</h4>
+      <p>Search agent returns prose → analysis summarises the prose → synthesis merges summaries.
+      Every hop discards sourcing; the report asserts orphaned claims. Conflicts get silently
+      "resolved" by whichever value survived.</p>
+    </div>
+    <div class="do">
+      <h4>Structured claim–source mapping</h4>
+      <p>Every finding travels as <code>{claim, excerpt, source_url, published_date}</code>, and
+      the synthesis agent is <b>required to preserve and merge the mappings</b>. Conflicting
+      statistics from credible sources are <em>annotated with both attributions</em> — never
+      arbitrarily picked. Dates prevent temporal differences masquerading as contradictions.</p>
+    </div>
+  </div>
+
+  <div class="key">
+    <span class="key-label">The one-sentence version of TS 5.5</span>
+    <p><b>Measure before you trust; segment before you measure; keep sampling after you automate;
+    and re-measure when the input distribution moves.</b> Every correct option in your five missed
+    questions is one clause of that sentence.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="../reference/exam-guide-v1.0.pdf">Exam Guide §6, Domain 5, TS 5.5</a> — read the
+    knowledge and skills bullets now that you have the picture; each bullet should map onto one of
+    the four diagrams above. For the statistics behind calibration,
+    <a href="https://platform.claude.com/docs/en/test-and-evaluate/eval-tool">Anthropic's eval
+    guidance</a> covers building labelled validation sets.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> The discriminating question:
+    <em>"when is model confidence usable?"</em> — you now have the full answer (as calibrated
+    routing input, per field, within the calibrated distribution, with ongoing sampled audit) and
+    should be able to say why each qualifier is there.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 14</b> · Domain 5 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0013-validation-batch-multipass.html">← L13 Validation, Batch &amp; Multi-Pass</a>
+      <a href="../drills/mock1-repair.html">Mock 1 repair drill →</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L14-calibration-review',
+  title: 'Retrieval check — calibration &amp; review routing',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Structured Data Extraction — a medical-forms pipeline reports 98% aggregate accuracy. Management proposes auto-approving all extractions where model confidence exceeds 92%.',
+      ts: 'TS 5.5',
+      stem: 'What is the critical risk in this proposal?',
+      options: [
+        'The aggregate can mask poor performance on specific form types or fields, and the confidence scores are uncalibrated.',
+        'Automation of medical data is inherently inappropriate, so extractions should always receive full human review.',
+        'The 92% threshold is too low for the medical domain and should be raised to at least 99% before automating.',
+        'Model confidence degrades as volume grows, so the threshold will silently loosen over time without retraining.'
+      ],
+      answer: 0,
+      why: 'Two measurement gaps, not a wrong ambition: 98% overall is compatible with terrible accuracy on one form type, and uncalibrated confidence cannot route anything. Fix the measurement — segment validation plus calibration — then automate.',
+      trap: 'Option B is the over-conservative reflex that cost you Q26: it abandons a legitimate goal instead of naming the proposal’s actual flaw. Option C tunes a number that means nothing until calibrated.'
+    },
+    {
+      ts: 'TS 5.5',
+      stem: 'Before reducing human review on high-confidence extractions, which safeguards does the blueprint require? (Select 3.)',
+      options: [
+        'Calibrate field-level confidence thresholds against a labelled validation set.',
+        'Verify accuracy separately by document type and field segment, not only in aggregate.',
+        'Keep stratified random samples of high-confidence output under review to measure error and catch novel patterns.',
+        'Grow the reviewer team until every extraction can be manually checked before release.'
+      ],
+      answer: [0, 1, 2],
+      why: 'The TS 5.5 triad: calibrate per field on labelled data; validate by segment before trusting the aggregate; and keep a stratified audit sample forever after automating. Each is a clause of "measure before you trust".',
+      trap: 'Option D — reviewing everything — is the distractor you chose on Q34. It ignores the entire point: routing scarce reviewer capacity with calibrated instruments rather than abolishing the constraint.'
+    },
+    {
+      scenario: 'Technical documentation system — Claude generates reference pages for 200 endpoints: 40 billing (regulatory exposure), 60 public API (external users), 100 internal (low risk). Reviewers can cover about 60 pages.',
+      ts: 'TS 5.5',
+      stem: 'How should review capacity be allocated?',
+      options: [
+        'Stratify by risk: all 40 billing pages, a moderate sample of public pages, a small sample of internal pages.',
+        'Have the model self-rate each page and review the sixty pages where its reported confidence is lowest.',
+        'Review a uniform random 30% of all pages so every category receives statistically equal coverage.',
+        'Review the first sixty pages generated, then use their measured error rate to decide about the rest.'
+      ],
+      answer: 0,
+      why: 'Allocate by consequence of error: regulatory-risk content gets 100%, external-facing content a moderate rate, low-blast-radius content a light rate. Roughly 40 + 12 + 5 ≈ 57 reviews covering the actual risk.',
+      trap: 'Option B is Q20’s trap restated: raw self-reported confidence is uncalibrated — fluent pages with subtle factual errors report high confidence. Risk tiers, not model self-assessment, drive allocation.'
+    },
+    {
+      ts: 'TS 5.5',
+      stem: 'A pilot shows name extraction at 99% actual accuracy and liability-clause extraction at 71% — while the model reports high confidence on both. What must be implemented before automation?',
+      options: [
+        'Per-field calibrated thresholds from labelled data, plus stratified sampling that monitors accuracy by type and field.',
+        'A single higher global confidence threshold that both fields must exceed before any record is auto-approved.',
+        'A second independent extraction pass on liability clauses, auto-approving only where the two passes agree.',
+        'Exclusion of liability clauses from the pipeline until the base model improves on that field category.'
+      ],
+      answer: 0,
+      why: 'The pilot is the aggregate mask made visible: identical reported confidence, wildly different actual accuracy. Only per-field calibration exposes and handles that discrepancy, and stratified sampling keeps watching after launch.',
+      trap: 'Option B cannot work — the model reports high confidence on the 71% field, so no global threshold separates them. That is exactly why calibration is per field.'
+    },
+    {
+      scenario: 'A calibrated pipeline (90% auto-approve threshold, validated for three months) receives contracts from a new client in an unfamiliar nested-table layout. The system reports 93% confidence.',
+      ts: 'TS 5.5',
+      stem: 'What is the appropriate handling?',
+      options: [
+        'Route the novel-layout documents to human review until enough labelled examples exist to extend the calibration.',
+        'Auto-approve, since 93% exceeds the validated threshold and the calibration held for a full quarter of traffic.',
+        'Raise the global threshold to 98% for all documents until the new layout has been in production for a month.',
+        'Reject the documents and ask the client to resubmit their contracts in a format the pipeline already supports.'
+      ],
+      answer: 0,
+      why: 'Calibration is a measurement of the distributions in the labelled set. On a layout it never saw, the reported 93% is uncalibrated — possibly systematically overconfident. Novel inputs go to review, which simultaneously builds the labelled sample that extends the calibration.',
+      trap: 'Option B treats the threshold as a property of the number rather than of the distribution it was measured on — Q51’s exact trap. Option C punishes well-calibrated formats while detecting nothing about the new one.'
+    },
+    {
+      scenario: 'Multi-Agent Research System — a final report asserts "the market grew 12%" but the team cannot determine which source supported the figure, and a conflicting 8% figure was silently dropped during synthesis.',
+      ts: 'TS 5.6',
+      stem: 'What structural change prevents this class of failure?',
+      options: [
+        'Require every finding to travel as a claim–source mapping (excerpt, URL, date) that synthesis must preserve, with conflicts annotated rather than resolved by omission.',
+        'Instruct the synthesis agent to write more carefully and to double-check statistics against its sources before including any figure in the final report.',
+        'Add a final fact-checking agent that re-searches the web for every statistic in the finished report and confirms each number independently.',
+        'Have the coordinator keep the full verbatim output of every subagent in its own context so any figure can be traced back after delivery.'
+      ],
+      answer: 0,
+      why: 'Attribution loss is structural — summaries discard sourcing at every hop — so the fix is structural: claim–source mappings that downstream agents are required to preserve and merge, with conflicting values annotated with both attributions and dates.',
+      trap: 'Option B is a prompt asking for a property the data structure cannot support — by synthesis time the sourcing is already gone. Option C re-derives provenance expensively instead of never losing it.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

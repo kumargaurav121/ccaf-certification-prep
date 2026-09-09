@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 07 — MCP &amp; Built-in Tools</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<style>
+  /* ---- L07-only visual additions — scoped to this page, lesson.css untouched ---- */
+
+  .stepper {
+    display: flex; align-items: center; gap: .4rem;
+    margin: 0 0 2rem; font-family: var(--mono); font-size: .68rem;
+  }
+  .stepper .seg { display: flex; align-items: center; gap: .4rem; }
+  .stepper .dot {
+    width: .55rem; height: .55rem; border-radius: 50%;
+    background: var(--rule); flex: none;
+  }
+  .stepper .dot.done { background: var(--good); }
+  .stepper .dot.current {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-bg);
+  }
+  .stepper .label { color: var(--ink-faint); }
+  .stepper .label.current { color: var(--accent); font-weight: 600; }
+  .stepper .track { flex: 1; height: 1px; background: var(--rule); min-width: 1rem; }
+  .stepper .track.done { background: var(--good); opacity: .5; }
+
+  .diagram {
+    margin: 1.6rem 0; padding: 1.2rem 1rem .9rem;
+    border: 1px solid var(--rule-soft); border-radius: 6px;
+    background: var(--note-bg);
+  }
+  .diagram svg { display: block; width: 100%; height: auto; }
+  .diagram .cap {
+    font-family: var(--mono); font-size: .66rem; color: var(--ink-faint);
+    text-align: center; margin-top: .6rem; letter-spacing: .02em;
+  }
+  .diagram text { font-family: var(--sans); fill: var(--ink); }
+  .diagram .dim  { fill: var(--ink-faint); }
+  .diagram .accent-fill { fill: var(--accent-bg); stroke: var(--accent); }
+  .diagram .accent-text { fill: var(--accent); }
+  .diagram line, .diagram path.wire { stroke: var(--ink-faint); }
+  .diagram .box { fill: var(--paper); stroke: var(--rule); }
+  .diagram .arrowhead { fill: var(--ink-faint); }
+
+  /* Scope cards — visual companion to the existing reference table */
+  .scope-cards {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: .8rem;
+    margin: 1.6rem 0;
+  }
+  @media (max-width: 40rem) { .scope-cards { grid-template-columns: 1fr; } }
+  .scope-card {
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .95rem 1rem; font-size: .86rem; background: var(--paper);
+  }
+  .scope-card .icon {
+    width: 1.6rem; height: 1.6rem; margin-bottom: .55rem;
+    color: var(--ink-faint);
+  }
+  .scope-card.shared .icon { color: var(--good); }
+  .scope-card h5 {
+    margin: 0 0 .2rem; font-size: .92rem; font-weight: 600;
+    font-family: var(--sans);
+  }
+  .scope-card .file {
+    font-family: var(--mono); font-size: .74rem; color: var(--accent);
+    display: block; margin-bottom: .5rem;
+  }
+  .scope-card p { margin: 0; color: var(--ink-soft); font-family: var(--sans); font-size: .84rem; line-height: 1.5; }
+  .scope-card .badge {
+    display: inline-block; margin-top: .6rem; font-family: var(--mono);
+    font-size: .62rem; letter-spacing: .06em; text-transform: uppercase;
+    padding: .15em .5em; border-radius: 3px;
+  }
+  .scope-card.shared .badge { color: var(--good); background: var(--good-bg); }
+  .scope-card.personal .badge { color: var(--ink-faint); background: var(--rule-soft); }
+
+  /* Compact decision-flow for the built-in six */
+  .flow {
+    margin: 1.6rem 0 1.8rem; padding: 1rem 1.1rem;
+    border: 1px solid var(--rule-soft); border-radius: 6px; background: var(--note-bg);
+  }
+  .flow-row {
+    display: grid; grid-template-columns: 1fr auto 6.5rem; gap: .7rem;
+    align-items: center; padding: .45rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    font-family: var(--sans); font-size: .84rem;
+  }
+  .flow-row:last-child { border-bottom: none; }
+  .flow-row .q { color: var(--ink-soft); }
+  .flow-row .arrow { color: var(--ink-faint); font-family: var(--mono); }
+  .flow-row .tool {
+    font-family: var(--mono); font-weight: 600; font-size: .78rem;
+    text-align: center; padding: .3rem .5rem; border-radius: 4px;
+    background: var(--accent-bg); color: var(--accent); border: 1px solid currentColor;
+  }
+  @media (max-width: 34rem) {
+    .flow-row { grid-template-columns: 1fr; text-align: left; }
+    .flow-row .tool { justify-self: start; }
+  }
+
+  /* Domain-complete checklist */
+  .checklist { list-style: none; margin: .8rem 0 0; padding: 0; }
+  .checklist li {
+    display: flex; align-items: baseline; gap: .55rem;
+    margin-bottom: .35rem; font-family: var(--sans); font-size: .92rem;
+  }
+  .checklist .tick {
+    color: var(--good); font-weight: 700; font-family: var(--mono);
+    flex: none;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 2 · Lesson 07 of 16 · closes Domain 2</p>
+  <h1>MCP &amp; Built-in Tools</h1>
+  <p class="standfirst">MCP is how an agent reaches systems nobody at Anthropic ever heard of —
+  your Jira, your database, your internal APIs. The exam tests where the configuration lives,
+  what resources are for, and when the humble built-ins beat all of it.</p>
+
+  <div class="meta">
+    <span><b>Domain 2</b> Tool Design &amp; MCP Integration · 18%</span>
+    <span><b>Covers</b> TS 2.4, TS 2.5</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <div class="stepper" aria-label="Domain 2 lesson progress">
+    <div class="seg"><span class="dot done"></span><span class="label">L05 Selection</span></div>
+    <span class="track done"></span>
+    <div class="seg"><span class="dot done"></span><span class="label">L06 Failure</span></div>
+    <span class="track done"></span>
+    <div class="seg"><span class="dot current"></span><span class="label current">L07 MCP &amp; Built-ins</span></div>
+  </div>
+
+  <h2>1. What MCP actually is</h2>
+
+  <p>The Model Context Protocol is an open standard for connecting agents to external systems.
+  An <b>MCP server</b> wraps a system (Jira, Postgres, GitHub) and exposes capabilities in a form
+  any MCP client can discover; Claude Code and the Agent SDK are clients. Two capability types
+  matter for the exam:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th></th><th>MCP tools</th><th>MCP resources</th></tr>
+    <tr><td><b>Are</b></td><td>Actions the model can invoke</td><td>Content the server exposes for reading</td></tr>
+    <tr><td><b>Think</b></td><td><code>create_ticket</code>, <code>process_refund</code></td>
+      <td>Issue summaries, doc hierarchies, database schemas</td></tr>
+    <tr><td><b>Exist to</b></td><td>Do things</td><td>Show what's available <em>without</em> tool calls</td></tr>
+  </table>
+  </div>
+
+  <p>Discovery is automatic: when a session starts, tools from <b>all configured servers are
+  discovered at connection time and available simultaneously</b> <span class="ts">TS 2.4</span>.
+  Nothing routes between servers — the agent simply sees one large tool list. (Which is exactly
+  why L05's tool-count concern applies across servers, not per server.)</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 620 160" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Session start triggers simultaneous discovery across Jira, GitHub, and Postgres MCP servers, which flatten into one tool list the model sees.">
+      <defs>
+        <marker id="arrow7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+        </marker>
+      </defs>
+
+      <!-- session start -->
+      <rect x="4" y="60" width="88" height="40" rx="5" class="box"/>
+      <text x="48" y="84" text-anchor="middle" font-size="12">Session start</text>
+
+      <!-- fan-out wires -->
+      <path class="wire" d="M92,80 C130,80 130,24 168,24" fill="none" marker-end="url(#arrow7)"/>
+      <path class="wire" d="M92,80 L168,80" fill="none" marker-end="url(#arrow7)"/>
+      <path class="wire" d="M92,80 C130,80 130,136 168,136" fill="none" marker-end="url(#arrow7)"/>
+
+      <!-- three servers -->
+      <rect x="170" y="6"  width="104" height="36" rx="5" class="box"/>
+      <text x="222" y="28" text-anchor="middle" font-size="11.5">Jira server</text>
+
+      <rect x="170" y="62" width="104" height="36" rx="5" class="box"/>
+      <text x="222" y="84" text-anchor="middle" font-size="11.5">GitHub server</text>
+
+      <rect x="170" y="118" width="104" height="36" rx="5" class="box"/>
+      <text x="222" y="140" text-anchor="middle" font-size="11.5">Postgres server</text>
+
+      <!-- converge -->
+      <path class="wire" d="M274,24 C320,24 320,80 358,80" fill="none" marker-end="url(#arrow7)"/>
+      <path class="wire" d="M274,80 L358,80" fill="none" marker-end="url(#arrow7)"/>
+      <path class="wire" d="M274,136 C320,136 320,80 358,80" fill="none" marker-end="url(#arrow7)"/>
+
+      <!-- flattened tool list -->
+      <rect x="360" y="52" width="150" height="56" rx="5" class="accent-fill"/>
+      <text x="435" y="76" text-anchor="middle" font-size="11.5" class="accent-text" font-weight="600">One flat tool list</text>
+      <text x="435" y="93" text-anchor="middle" font-size="10" class="dim">no per-server routing</text>
+
+      <!-- to model -->
+      <path class="wire" d="M510,80 L556,80" fill="none" marker-end="url(#arrow7)"/>
+      <rect x="558" y="60" width="58" height="40" rx="5" class="box"/>
+      <text x="587" y="84" text-anchor="middle" font-size="12">Model</text>
+    </svg>
+    <p class="cap">All servers discovered at connection time — the model chooses from one merged list, same as L05.</p>
+  </div>
+
+  <h2>2. Where the configuration lives</h2>
+
+  <p>The exam's core TS 2.4 discrimination — <b>who is this server for?</b></p>
+
+  <div class="scope-cards">
+    <div class="scope-card shared">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><circle cx="17" cy="9" r="2.2" stroke-width="1.4"/></svg>
+      <h5>Project</h5>
+      <span class="file">.mcp.json</span>
+      <p>Committed to the repo — every teammate gets it on clone. Each user approves before first use.</p>
+      <span class="badge">Shared</span>
+    </div>
+    <div class="scope-card personal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.4-4 4-6 7.5-6s6.1 2 7.5 6"/></svg>
+      <h5>User</h5>
+      <span class="file">~/.claude.json</span>
+      <p>Lives in your home directory. Available across all your projects — never committed, never shared.</p>
+      <span class="badge">Personal</span>
+    </div>
+    <div class="scope-card personal">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1.4-4 4-6 7.5-6s6.1 2 7.5 6"/><path d="M2 2l20 20" stroke-width="1.2"/></svg>
+      <h5>Local</h5>
+      <span class="file">~/.claude.json <span style="opacity:.6">(per-project)</span></span>
+      <p>Same file as User scope, scoped to one project entry. The CLI default — personal, not shared.</p>
+      <span class="badge">Personal</span>
+    </div>
+  </div>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Scope</th><th>File</th><th>Loads in</th><th>Shared with team?</th></tr>
+    <tr><td><b>Project</b></td><td><code>.mcp.json</code> at the project root</td>
+      <td>That project</td><td class="yes">Yes — checked into version control</td></tr>
+    <tr><td><b>User</b></td><td><code>~/.claude.json</code></td>
+      <td>All your projects</td><td class="no">No — personal</td></tr>
+    <tr><td><b>Local</b></td><td><code>~/.claude.json</code> (per-project entry)</td>
+      <td>That project only</td><td class="no">No — personal; the CLI default</td></tr>
+  </table>
+  </div>
+
+  <p>The rule as the blueprint frames it: <b>shared team tooling goes in project-scoped
+  <code>.mcp.json</code>; personal or experimental servers go in user-scoped
+  <code>~/.claude.json</code></b>. Because <code>.mcp.json</code> is committed, teammates get the
+  server on clone — and because that is a security surface, Claude Code asks each user to approve
+  project-scoped servers before first use.</p>
+
+  <h3>Credentials without committing secrets</h3>
+
+<pre><code>// .mcp.json — committed to the repo
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"     // expanded from each
+      }                                        // user's environment
+    }
+  }
+}</code></pre>
+
+  <p><b>Environment variable expansion</b> (<code>${GITHUB_TOKEN}</code>) is the blueprint's
+  named mechanism: the <em>configuration</em> is shared, the <em>credential</em> never is — each
+  machine resolves the variable from its own environment
+  <span class="ts">TS 2.4</span>.</p>
+
+  <h2>3. Resources: the catalog pattern</h2>
+
+  <p>Without resources, an agent asking "what documentation exists?" must make exploratory tool
+  calls — list this, list that, fetch and see. Every probe costs a round trip and context.
+  <b>Resources exist to eliminate exploratory calls</b>: the server exposes a catalog (issue
+  summaries, schema listings, doc trees) that gives the agent visibility into what is available
+  <em>before</em> it reaches for a tool.</p>
+
+  <p>The design instinct the exam wants: content that is <em>browsed or referenced</em> should be
+  a resource; operations that <em>change things or compute answers</em> should be tools. A server
+  that exposes <code>get_all_issue_summaries</code> as a tool is spending tool-selection budget
+  (and a round trip) on what a resource would give for free.</p>
+
+  <h2>4. Two adoption tradeoffs</h2>
+
+  <div class="pair">
+    <div class="do">
+      <h4>Community server first</h4>
+      <p>For standard integrations — Jira, GitHub, Postgres — <b>choose existing community MCP
+      servers over custom implementations</b>. Reserve custom servers for genuinely team-specific
+      workflows. Building a bespoke Jira wrapper is undifferentiated effort plus a maintenance
+      tail.</p>
+    </div>
+    <div class="do">
+      <h4>Describe or be ignored</h4>
+      <p>MCP tools compete with built-ins for selection. If your MCP server's search tool has a
+      thin description, the agent will <b>prefer built-in Grep over the more capable MCP
+      tool</b> — it can see exactly what Grep does. The fix is L05 applied here: enhance the MCP
+      tool's description until its advantage is legible.</p>
+    </div>
+  </div>
+
+  <h2>5. The built-in six</h2>
+
+  <p><span class="ts">TS 2.5</span> is about picking the right primitive. The selection logic:</p>
+
+  <div class="flow" role="img" aria-label="Decision flow from question type to built-in tool">
+    <div class="flow-row"><span class="q">Need to search file <b>contents</b>?</span><span class="arrow">→</span><span class="tool">Grep</span></div>
+    <div class="flow-row"><span class="q">Need to find files by <b>name / path</b>?</span><span class="arrow">→</span><span class="tool">Glob</span></div>
+    <div class="flow-row"><span class="q">Need <b>one file, fully</b>, before reasoning?</span><span class="arrow">→</span><span class="tool">Read</span></div>
+    <div class="flow-row"><span class="q">Need a <b>surgical change</b> at a unique anchor?</span><span class="arrow">→</span><span class="tool">Edit</span></div>
+    <div class="flow-row"><span class="q">Need a <b>new file</b> or a full rewrite?</span><span class="arrow">→</span><span class="tool">Write</span></div>
+    <div class="flow-row"><span class="q">Anything else — tests, builds, git?</span><span class="arrow">→</span><span class="tool">Bash</span></div>
+  </div>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Tool</th><th>Searches / acts on</th><th>Reach for it when</th></tr>
+    <tr><td><b>Grep</b></td><td><em>Contents</em> of files</td>
+      <td>Finding a function's callers, an error message, an import</td></tr>
+    <tr><td><b>Glob</b></td><td><em>Paths</em> of files</td>
+      <td>Finding files by name pattern — <code>**/*.test.tsx</code></td></tr>
+    <tr><td><b>Read</b></td><td>One file, fully</td><td>Loading content before reasoning or editing</td></tr>
+    <tr><td><b>Edit</b></td><td>Targeted change by unique anchor text</td><td>Surgical modification</td></tr>
+    <tr><td><b>Write</b></td><td>Whole file</td><td>New files, or full rewrites</td></tr>
+    <tr><td><b>Bash</b></td><td>Anything else</td><td>Running tests, builds, git</td></tr>
+  </table>
+  </div>
+
+  <p>Two tested subtleties:</p>
+
+  <ul>
+    <li><b>The Edit fallback.</b> Edit matches on unique anchor text. When the text you would
+      anchor on is <em>not unique</em> in the file, Edit fails — the documented fallback is
+      <b>Read the full file, then Write it back modified</b>. Not "try Edit harder", not Bash
+      with <code>sed</code>.</li>
+    <li><b>Grep first means content-question; Glob first means name-question.</b> "Where is
+      <code>calculateRefund</code> called?" is a content question — Grep. "Where are the test
+      files?" is a naming question — Glob. Mixing them up works eventually but wastes turns.</li>
+  </ul>
+
+  <h2>6. Exploring a codebase incrementally</h2>
+
+  <p>The blueprint's exploration pattern, and the anti-pattern it replaces
+  <span class="ts">TS 2.5</span>:</p>
+
+  <div class="pair">
+    <div class="do">
+      <h4>Incremental</h4>
+      <p><b>Grep for entry points → Read to follow imports → trace the flow.</b> Each step is
+      guided by what the last step found; context carries only what the trail needed. For a
+      re-exported function, first identify all exported names, then search for each across the
+      codebase.</p>
+    </div>
+    <div class="dont">
+      <h4>Read everything upfront</h4>
+      <p>Reading all files "for context" floods the window with mostly-irrelevant content before
+      the question is even sharp — the L02 isolation problem, self-inflicted. By the time the
+      answer matters, the relevant file is buried in the middle of 60 others.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="note-label">Domain 2 complete</span>
+    <p>All five task statements, ≈11 items, banked:</p>
+    <ul class="checklist">
+      <li><span class="tick">✓</span> L05 — Tool interfaces &amp; selection</li>
+      <li><span class="tick">✓</span> L06 — Structured errors</li>
+      <li><span class="tick">✓</span> L07 — MCP integration &amp; built-in primitives</li>
+    </ul>
+    <p style="margin-top:.9rem">Next is Domain 3, your home turf: the CLAUDE.md hierarchy,
+    <code>.claude/rules/</code> glob scoping, and the fine detail daily use tends to skip.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://code.claude.com/docs/en/mcp">Connect Claude Code to tools via MCP</a> —
+    the "MCP installation scopes" table is the authoritative version of section 2. Note the docs
+    now describe <em>three</em> scopes (local/project/user); the exam guide tests the
+    project-vs-user distinction, which is unchanged.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> A good one to try on yourself first:
+    <em>"my team's MCP server needs an API key — walk through exactly what is committed, what
+    lives on each laptop, and what happens on a fresh clone."</em> If you can narrate that
+    end-to-end, TS 2.4 is banked.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 07</b> · Domain 2 complete · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0006-structured-errors.html">← L06 Structured Errors</a>
+      <a href="../reference/00-exam-blueprint.html">Ref 00 — Blueprint</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L07-mcp-builtins',
+  title: 'Retrieval check — MCP &amp; built-in tools',
+  passMark: 0.72,
+  questions: [
+    {
+      ts: 'TS 2.4',
+      stem: 'Your team’s Jira MCP server should be available to every developer on clone, but it needs each developer’s personal API token. How do you configure this?',
+      options: [
+        'Define the server in project-scoped .mcp.json with ${JIRA_TOKEN} expansion, resolved from each developer’s environment.',
+        'Define the server in each developer’s user-scoped ~/.claude.json, and document the required setup in the project README.',
+        'Define the server in project-scoped .mcp.json with the token inline, and restrict repository access to the immediate team.',
+        'Define the server in user-scoped ~/.claude.json with ${JIRA_TOKEN} expansion, and commit that file to version control.'
+      ],
+      answer: 0,
+      why: 'Shared team tooling belongs in project-scoped .mcp.json, which travels via version control; environment variable expansion keeps the credential out of the committed file — each machine resolves ${JIRA_TOKEN} locally.',
+      trap: 'Option B works but abandons the requirement: nothing arrives on clone, and every developer re-creates configuration by hand. Option D is contradictory — ~/.claude.json lives in the home directory and is never committed.'
+    },
+    {
+      ts: 'TS 2.4',
+      stem: 'You are experimenting with a half-built MCP server for a personal workflow. Where does its configuration belong, and why?',
+      options: [
+        'User-scoped ~/.claude.json — experimental servers stay personal rather than being pushed onto teammates.',
+        'Project-scoped .mcp.json — keeping every server declaration in one reviewed file simplifies later auditing.',
+        'Project-scoped .mcp.json, commented out — teammates then see the experiment coming before it is enabled.',
+        'A separate git branch carrying its own .mcp.json — the experiment merges to main only once it stabilises.'
+      ],
+      answer: 0,
+      why: 'The blueprint’s split: shared team tooling in project scope, personal/experimental servers in user scope. An experiment in .mcp.json would prompt every teammate to approve a server that exists for exactly one person.',
+      trap: 'Option D sounds disciplined but misuses branches for configuration lifecycle — and until merge-day the experiment is invisible to you in other projects too. Scope, not branching, is the isolation mechanism.'
+    },
+    {
+      ts: 'TS 2.4',
+      stem: 'A research agent makes many exploratory tool calls just to discover what documentation and schemas exist before starting real work. What is the MCP-native fix?',
+      options: [
+        'Expose the content catalog as MCP resources, giving the agent visibility into available data without tool calls.',
+        'Add a list_everything tool that returns the full catalog, so discovery costs exactly one tool invocation.',
+        'Preload the entire documentation set into the system prompt so that discovery requires no round trips at all.',
+        'Enable list_changed notifications so the server pushes catalog updates to the agent as documents change.'
+      ],
+      answer: 0,
+      why: 'This is precisely what MCP resources are for: content catalogs — issue summaries, documentation hierarchies, database schemas — exposed for reference so the agent knows what exists before reaching for a tool.',
+      trap: 'Option B rebuilds resources as a tool, spending a round trip and tool-selection budget on what the protocol gives for free. Option C bloats every request’s context with a catalog that mostly is not needed.'
+    },
+    {
+      ts: 'TS 2.4',
+      stem: 'Your MCP server exposes a powerful semantic code-search tool, but agents keep using built-in Grep instead. What is the most likely cause and fix?',
+      options: [
+        'The MCP tool’s description is thin, so its advantage over Grep is invisible — enhance the description until the capability is legible.',
+        'Built-in tools always take precedence over MCP tools during selection, so the built-in must be disabled before the MCP tool is viable.',
+        'The MCP server was configured at user scope, and only project-scoped tools are able to compete with the built-ins for selection.',
+        'Grep appears earlier in the combined tool list than any MCP tool, and models prefer the tools presented nearest the beginning.'
+      ],
+      answer: 0,
+      why: 'MCP tools and built-ins compete in one selection pool, on descriptions alone. The model knows exactly what Grep does; if the MCP tool’s description does not make its advantage legible, the familiar primitive wins. The blueprint names enhancing MCP tool descriptions as the fix.',
+      trap: 'Options B, C and D all invent precedence mechanisms — built-in priority, scope-based ranking, list-order preference. None exist. Selection is text matching, which is why description quality settles it.'
+    },
+    {
+      ts: 'TS 2.5',
+      stem: 'You need every file that calls the function formatCurrency, and separately, every test file in the repository. Which built-in tool serves each need?',
+      options: [
+        'Grep for the callers, since that is a content search; Glob for the test files, since that is a path pattern.',
+        'Glob for the callers, since call sites follow naming patterns; Grep for test files, which contain the word "test".',
+        'Grep for both — one search for the function name and a second search for files whose text mentions testing.',
+        'Read for the callers by loading candidate files, and Glob for the test files using the standard test patterns.'
+      ],
+      answer: 0,
+      why: 'Grep searches file contents — a call site is text inside files. Glob matches file paths — **/*.test.* finds test files by name regardless of location. Content question → Grep; naming question → Glob.',
+      trap: 'Option C would find test files only when their content happens to mention testing, and misses the idiomatic case where the filename is the convention. The tools split on what is being searched: text versus path.'
+    },
+    {
+      ts: 'TS 2.5',
+      stem: 'Edit fails on a config file because the line you anchored on appears four times. What is the documented fallback?',
+      options: [
+        'Read the full file, then Write it back with the modification applied.',
+        'Retry Edit with replace_all so that all four occurrences change together.',
+        'Use Bash with sed, addressing the specific occurrence by its line number.',
+        'Split the file into sections so each anchor becomes unique, then re-run Edit.'
+      ],
+      answer: 0,
+      why: 'When Edit cannot find unique anchor text, the blueprint’s fallback is Read + Write: load the full content, apply the change, write the file back. Reliable regardless of how many near-duplicates the file contains.',
+      trap: 'Option B changes all four occurrences when you wanted one — replace_all answers a different need. Option C works in a terminal but is not the documented pattern, and line-number edits are brittle the moment the file shifts.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

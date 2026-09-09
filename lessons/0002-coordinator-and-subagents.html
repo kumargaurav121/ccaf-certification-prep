@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 02 — Coordinator &amp; Subagents</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<style>
+  .diag {
+    font-family: var(--mono); font-size: .76rem; line-height: 1.7;
+    background: var(--code-bg); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 1.2rem; margin: 1.5rem 0; overflow-x: auto;
+    white-space: pre; color: var(--ink-soft);
+  }
+  .diag b { color: var(--accent); font-weight: 600; }
+  .diag i { color: var(--good); font-style: normal; font-weight: 600; }
+  .diag u { color: var(--bad); text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 1 · Lesson 02 of 16</p>
+  <h1>Coordinator &amp; Subagents</h1>
+  <p class="standfirst">A subagent is not a function call. It is a second agentic loop running in
+  a context your coordinator cannot see, connected by exactly one string of text. Almost every
+  multi-agent bug follows from forgetting that sentence.</p>
+
+  <div class="meta">
+    <span><b>Domain 1</b> Agentic Architecture &amp; Orchestration · 27%</span>
+    <span><b>Covers</b> TS 1.2, TS 1.3</span>
+    <span><b>Time</b> ~15 min</span>
+    <span><b>Builds on</b> <a href="0001-the-agentic-loop.html">L01</a></span>
+  </div>
+
+  <h2>1. Why spawn a second agent at all</h2>
+
+  <p>Not for parallelism first — for <b>context isolation</b>. A subagent that reads forty files
+  to answer "where is the refund flow defined?" burns forty files of context. If it runs inside
+  your main loop, that content stays in the conversation forever, crowding out everything after
+  it. If it runs as a subagent, the parent receives only the final answer. The forty file reads
+  never touch the parent's context window.</p>
+
+  <p>Three further benefits follow: <b>parallelism</b> (independent subtasks finish in the time of
+  the slowest, not the sum), <b>specialised instructions</b> (a migration expert's system prompt
+  would be noise in the main agent), and <b>tool restriction</b> (a reviewer that only has Read
+  and Grep cannot accidentally write).</p>
+
+  <h2>2. What a subagent actually is</h2>
+
+  <p>It is the loop from <a href="0001-the-agentic-loop.html">Lesson 01</a>, run again, with a
+  fresh conversation. It calls tools, gets results, iterates on <code>stop_reason</code>, and
+  terminates on <code>end_turn</code>. The only thing that returns to the parent is its
+  <b>final message</b> — delivered as a tool result.</p>
+
+  <div class="diag">              <b>COORDINATOR</b> (its own loop, own context)
+                   │
+      ┌────────────┼────────────┐
+      │            │            │
+   <i>Task</i>         <i>Task</i>         <i>Task</i>      ← one response, three calls = parallel
+      │            │            │
+  ┌───▼───┐    ┌───▼───┐    ┌───▼───┐
+  │search │    │analyse│    │ synth │   each: fresh context, own loop
+  └───┬───┘    └───┬───┘    └───┬───┘
+      │            │            │
+   final msg    final msg    final msg  ← ONLY this returns
+      │            │            │
+      └────────────┼────────────┘
+                   ▼
+              <b>COORDINATOR</b> aggregates
+
+  <u>✗ subagents never talk to each other directly</u></div>
+
+  <h2>3. What crosses the boundary — and what does not</h2>
+
+  <p>This table is the single highest-value thing in the lesson. <span class="ts">TS 1.3</span></p>
+
+  <div class="pair">
+    <div class="do">
+      <h4>The subagent receives</h4>
+      <ul>
+        <li>Its own system prompt (<code>AgentDefinition.prompt</code>)</li>
+        <li><b>The Task tool's prompt string</b> — the only channel from the parent</li>
+        <li>Project CLAUDE.md</li>
+        <li>Its tool definitions</li>
+      </ul>
+    </div>
+    <div class="dont">
+      <h4>It does <em>not</em> receive</h4>
+      <ul>
+        <li>The parent's conversation history</li>
+        <li>The parent's tool results</li>
+        <li>The parent's system prompt</li>
+        <li>Anything from a sibling subagent</li>
+        <li>Anything from a previous invocation of itself</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="key">
+    <span class="key-label">The consequence you are tested on</span>
+    <p>If the synthesis agent needs the search agent's findings, the coordinator must <b>copy
+    those findings into the synthesis agent's prompt</b>. There is no shared memory, no automatic
+    inheritance, no ambient context. "Summarise what the other agents found" fails, because the
+    synthesis agent has never seen what the other agents found.</p>
+  </div>
+
+  <p>This is also why <b>structured output between agents matters</b>. If the search agent returns
+  prose, the coordinator has to paste prose into the next prompt and attribution dissolves. If it
+  returns <code>{claim, evidence, source_url, published_date}</code>, the coordinator can pass
+  content and metadata through intact — which is what makes cited reports possible.</p>
+
+  <h2>4. Spawning: the mechanics</h2>
+
+  <p>Subagents are spawned through the <b><code>Task</code> tool</b>, and the coordinator's
+  <code>allowedTools</code> <b>must include <code>"Task"</code></b> or the invocation is never
+  approved and Claude quietly does the work itself instead.</p>
+
+<pre><code>options = ClaudeAgentOptions(
+    allowed_tools=["Read", "Grep", "Glob", "Task"],   # <-- Task required
+    agents={
+        "web-searcher": AgentDefinition(
+            description="Searches the web for primary sources on a topic.",
+            prompt="You find primary sources. Return claim, excerpt, "
+                   "source URL and publication date for each finding.",
+            tools=["WebSearch", "WebFetch"],   # scoped: cannot write files
+            model="sonnet",
+        ),
+    },
+)</code></pre>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Field</th><th>Required</th><th>What it does</th></tr>
+    <tr><td><code>description</code></td><td class="yes">yes</td><td><b>When to use this subagent</b> — this is how Claude decides to delegate</td></tr>
+    <tr><td><code>prompt</code></td><td class="yes">yes</td><td>The subagent's system prompt: role and behaviour</td></tr>
+    <tr><td><code>tools</code></td><td>no</td><td>Allowed tools. Omit and it inherits everything available</td></tr>
+    <tr><td><code>model</code></td><td>no</td><td><code>opus</code>/<code>sonnet</code>/<code>haiku</code>/<code>inherit</code></td></tr>
+  </table>
+  </div>
+
+  <div class="warn">
+    <span class="warn-label">Exam answer vs shipping product</span>
+    <p>The Exam Guide says <code>Task</code>. <b>Answer <code>Task</code> on the exam.</b> In the
+    current product the tool was renamed to <code>Agent</code> (Claude Code v2.1.63) — SDKs now
+    emit <code>"Agent"</code> in <code>tool_use</code> blocks while still listing
+    <code>"Task"</code> in <code>system:init</code>. Your daily-driver instinct will say
+    <code>Agent</code>; the exam wants <code>Task</code>.</p>
+  </div>
+
+  <h2>5. Parallel means one response, not one turn each</h2>
+
+  <p>To run subagents concurrently, the coordinator emits <b>multiple Task tool calls in a single
+  response</b>. Exactly as in Lesson 01: several <code>tool_use</code> blocks in one turn, all
+  answered together in one follow-up message.</p>
+
+  <div class="pair">
+    <div class="do">
+      <h4>Parallel</h4>
+      <p>One assistant turn containing three <code>Task</code> calls. All three subagents run
+      concurrently; wall-clock is the slowest one.</p>
+    </div>
+    <div class="dont">
+      <h4>Accidentally sequential</h4>
+      <p>Three assistant turns, one <code>Task</code> call each. Each waits for the last.
+      Wall-clock is the sum. Functionally identical, three times slower.</p>
+    </div>
+  </div>
+
+  <h2>6. Hub-and-spoke: why everything routes through the coordinator</h2>
+
+  <p><span class="ts">TS 1.2</span> The coordinator manages <em>all</em> inter-subagent
+  communication, error handling and information routing. Subagents never talk to each other.
+  Three reasons, and the exam expects you to be able to give them:</p>
+
+  <ul>
+    <li><b>Observability.</b> One place to see what was delegated, what came back, what failed.</li>
+    <li><b>Consistent error handling.</b> A subagent timeout is handled by one policy, not by
+      whichever peer happened to be listening.</li>
+    <li><b>Controlled information flow.</b> The coordinator decides what each subagent sees —
+      which is the only lever you have, given section 3.</li>
+  </ul>
+
+  <h2>7. The coordinator's real job</h2>
+
+  <p>Delegation is the easy part. The coordinator owns four responsibilities, and the exam tests
+  the failure mode of each.</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Responsibility</th><th>Done badly</th><th>Done well</th></tr>
+    <tr>
+      <td><b>Task decomposition</b></td>
+      <td>Decomposes "creative industries" into digital art, graphic design, photography — and the
+        report silently omits music, writing and film</td>
+      <td>Partitions scope to cover the topic, assigning distinct subtopics or source types to
+        minimise duplication</td>
+    </tr>
+    <tr>
+      <td><b>Dynamic selection</b></td>
+      <td>Always routes through the full pipeline regardless of what was asked</td>
+      <td>Analyses the query and invokes only the subagents it actually needs</td>
+    </tr>
+    <tr>
+      <td><b>Result aggregation</b></td>
+      <td>Concatenates final messages, losing which agent found what</td>
+      <td>Merges structured findings, preserving claim–source mappings</td>
+    </tr>
+    <tr>
+      <td><b>Iterative refinement</b></td>
+      <td>One pass: delegate, synthesise, ship</td>
+      <td>Evaluates synthesis for gaps, re-delegates with <em>targeted</em> queries, re-invokes
+        synthesis until coverage is sufficient</td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="note">
+    <span class="note-label">Narrow decomposition is the signature Domain 1 failure</span>
+    <p>Every subagent can execute perfectly and the system still fails, because the fault is in
+    <em>what they were asked to do</em>. When a multi-agent system produces confident, coherent,
+    incomplete output, suspect the decomposition before you suspect any subagent.</p>
+  </div>
+
+  <h2>8. Write goals, not procedures</h2>
+
+  <p>A last point that is easy to get backwards. Coordinator prompts should specify <b>research
+  goals and quality criteria</b> — not step-by-step procedural instructions.</p>
+
+  <div class="pair">
+    <div class="dont">
+      <h4>Procedural</h4>
+      <p><em>"Call web-searcher. Then call doc-analyser on each result. Then call synthesiser."</em>
+      You have hard-coded a pipeline into a system whose value is adapting to what it finds. The
+      coordinator can no longer skip a step or loop back.</p>
+    </div>
+    <div class="do">
+      <h4>Goal + criteria</h4>
+      <p><em>"Produce a cited report covering all major sub-domains of the topic. Every claim needs
+      a source and a date. Identify coverage gaps and investigate them before synthesising."</em>
+      Now the coordinator can decompose, re-delegate and stop when the criteria are met.</p>
+    </div>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://code.claude.com/docs/en/agent-sdk/subagents">Subagents in the SDK</a>
+    (Claude Code docs) — in particular the "What subagents inherit" table, which is section 3
+    above stated authoritatively. Then read Anthropic's
+    <a href="https://www.anthropic.com/engineering/multi-agent-research-system">How we built our
+    multi-agent research system</a>, which is effectively a walkthrough of exam Scenario 3,
+    including why they partition scope and how they handle subagent failure.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> Worth pushing on:
+    <em>"if subagents can't share memory, how does a research system avoid three agents fetching
+    the same source?"</em> (scope partitioning — and it is a design problem, not a technical one),
+    or <em>"when is a subagent the wrong call?"</em> — the answer involves what you lose by
+    throwing away the intermediate context.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 02</b> · Domain 1 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0001-the-agentic-loop.html">← L01 The Agentic Loop</a>
+      <a href="../reference/01-api-mechanics.html">Ref 01 — API mechanics</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L02-coordinator-subagents',
+  title: 'Retrieval check — coordinator &amp; subagents',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Multi-Agent Research System — a coordinator delegates to a web search subagent, a document analysis subagent, and a synthesis subagent, producing cited reports.',
+      ts: 'TS 1.3',
+      stem: 'The synthesis subagent produces reports that reference "the findings above" but contain no actual findings. The search and analysis subagents both completed successfully and returned good results to the coordinator. What is the cause?',
+      options: [
+        'The coordinator did not include the prior subagents’ findings in the synthesis subagent’s prompt, and subagents inherit no parent context.',
+        'The synthesis subagent was given too many tools, so it attempted retrieval itself instead of reading the findings already present in its context.',
+        'The coordinator aggregated the findings after invoking synthesis, so the shared conversation history had not yet been updated when synthesis ran.',
+        'The synthesis subagent exhausted its context window reading the parent conversation history before it could produce the final structured report.'
+      ],
+      answer: 0,
+      why: 'A subagent starts with a fresh context. The only content that crosses from parent to subagent is the Task tool’s prompt string. If the coordinator does not paste the findings in, the synthesis agent has literally never seen them — so it writes around an absence.',
+      trap: 'Options C and D both assume a shared conversation history that does not exist. There is no history for synthesis to read, in time or out of time.'
+    },
+    {
+      ts: 'TS 1.3',
+      stem: 'Your coordinator never delegates — it completes every task itself despite three well-described subagents being defined. Which configuration error most likely explains this?',
+      options: [
+        'allowedTools does not include "Task", so subagent invocations are never approved.',
+        'The AgentDefinition entries omit the model field, so the subagents cannot be instantiated.',
+        'The subagents define a tools array, which prevents the coordinator from invoking them.',
+        'The coordinator prompt states goals rather than procedures, so no delegation is triggered.'
+      ],
+      answer: 0,
+      why: 'Subagents are spawned through the Task tool. If "Task" is absent from allowedTools, the invocation is not auto-approved and Claude falls back to doing the work directly.',
+      trap: 'Option B is wrong because model is optional — it defaults to the main model. Option C inverts the purpose of tools, which restricts what the subagent may do, not whether it can be called.'
+    },
+    {
+      ts: 'TS 1.2',
+      stem: 'A research system returns coherent, well-written reports on "impact of AI on creative industries" that cover only visual arts, omitting music, writing and film. Coordinator logs show three subtasks: "AI in digital art", "AI in graphic design", "AI in photography". Every subagent completed successfully. Where is the fault?',
+      options: [
+        'The coordinator’s task decomposition was too narrow, so the assigned subtasks never covered the full topic.',
+        'The web search subagent used queries that were insufficiently broad to reach non-visual creative industry sources.',
+        'The synthesis subagent lacked instructions to detect and report coverage gaps in the findings it received.',
+        'The document analysis subagent applied relevance criteria that filtered out non-visual creative industry material.'
+      ],
+      answer: 0,
+      why: 'The logs name the cause directly: the topic was decomposed into three visual-arts subtasks. Every subagent then performed correctly within the scope it was given. This is the signature Domain 1 failure — confident, coherent, incomplete output caused by decomposition, not execution.',
+      trap: 'B, C and D each blame a component the stem describes as working correctly. A subagent cannot search for a subtopic it was never assigned.'
+    },
+    {
+      ts: 'TS 1.3',
+      stem: 'You want three independent subagents to run concurrently rather than one after another. What must the coordinator do?',
+      options: [
+        'Emit all three Task tool calls within a single response, so the three subagents are launched together.',
+        'Emit one Task tool call per response across three consecutive turns, letting the runtime batch them.',
+        'Set a parallel flag in each AgentDefinition so the runtime knows the three may execute concurrently.',
+        'Invoke a single subagent and instruct it in its prompt to spawn the other two subagents itself.'
+      ],
+      answer: 0,
+      why: 'Parallelism comes from multiple tool_use blocks in one assistant turn — exactly the parallel tool call mechanics from Lesson 01. Three calls in one response run concurrently; wall-clock becomes the slowest rather than the sum.',
+      trap: 'Option B is the accidental-sequential pattern: functionally identical output, three times the latency. It is the most common way multi-agent systems are slow for no reason.'
+    },
+    {
+      ts: 'TS 1.2',
+      stem: 'Why should all communication between subagents be routed through the coordinator rather than allowing subagents to exchange results directly? (Select 2.)',
+      options: [
+        'It gives one place to observe what was delegated, what returned, and what failed.',
+        'It lets a single policy handle subagent failures rather than whichever peer received them.',
+        'It reduces the total token cost, because messages are compressed as they pass through.',
+        'It allows subagents to share a common context window and therefore avoid duplicated work.'
+      ],
+      answer: [0, 1],
+      why: 'Hub-and-spoke exists for observability, consistent error handling, and controlled information flow. Those first two are stated directly in the blueprint for TS 1.2.',
+      trap: 'Option D describes something hub-and-spoke specifically does NOT provide — subagents never share a context window under any topology. Option C invents a compression behaviour that does not exist; routing through the coordinator generally costs more tokens, and you pay that for control.'
+    },
+    {
+      ts: 'TS 1.2',
+      stem: 'A coordinator prompt reads: "First call web-searcher. Then call doc-analyser on each result. Then call synthesiser and return its output." What is the design weakness?',
+      options: [
+        'It hard-codes a fixed pipeline, so the coordinator cannot skip steps or re-delegate to fill gaps.',
+        'It names the subagents explicitly, which overrides the description field used for automatic matching.',
+        'It places the synthesis step last, which prevents findings from being verified before they are combined.',
+        'It requires three separate turns, which means the subagents can never be run concurrently at all.'
+      ],
+      answer: 0,
+      why: 'Procedural instructions convert an adaptive system into a fixed workflow. The coordinator can no longer select subagents dynamically based on the query, nor run the iterative refinement loop where it spots coverage gaps and re-delegates with targeted queries. Prompts should state goals and quality criteria instead.',
+      trap: 'Option D is tempting because sequencing language does tend to produce sequential turns — but that is a side effect, not the design weakness. The real loss is the coordinator’s ability to adapt at all, which persists even if the calls happened to run in parallel.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

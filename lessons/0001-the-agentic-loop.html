@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 01 — The Agentic Loop</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<style>
+  .loopdiag {
+    font-family: var(--mono); font-size: .78rem; line-height: 1.75;
+    background: var(--code-bg); border: 1px solid var(--rule);
+    border-radius: 4px; padding: 1.2rem; margin: 1.5rem 0; overflow-x: auto;
+    white-space: pre; color: var(--ink-soft);
+  }
+  .loopdiag b { color: var(--accent); font-weight: 600; }
+  .loopdiag i { color: var(--good); font-style: normal; font-weight: 600; }
+  .blockspec { font-family: var(--sans); font-size: .86rem; }
+  .blockspec td code { font-size: .82em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 1 · Lesson 01 of 16</p>
+  <h1>The Agentic Loop</h1>
+  <p class="standfirst">An agent is not a special kind of model. It is an ordinary Messages API
+  call placed inside a <code>while</code> loop, where one field in the response decides whether
+  the loop runs again. Get that field right and everything else in Domain 1 follows.</p>
+
+  <div class="meta">
+    <span><b>Domain 1</b> Agentic Architecture &amp; Orchestration · 27%</span>
+    <span><b>Covers</b> <a href="../reference/00-exam-blueprint.html">TS 1.1</a></span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. What the model actually does</h2>
+
+  <p>Claude cannot run anything. When you give it tools, it does not execute them — it
+  <em>emits a structured request</em> that your code executes. That single fact is the whole
+  architecture. The loop exists because the model must hand control back to you, receive the
+  result, and then reason again with that result in front of it.</p>
+
+  <p>A tool definition has exactly three parts:</p>
+
+<pre><code>tools = [{
+    "name": "lookup_order",
+    "description": "Retrieve an order by its order ID. Returns status, "
+                   "line items, totals and shipping dates.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "order_id": {"type": "string", "description": "e.g. ORD-12345"}
+        },
+        "required": ["order_id"]
+    }
+}]</code></pre>
+
+  <p>The <code>description</code> is the only thing that tells Claude when to pick this tool over
+  another. That is why Domain 2 spends an entire task statement on description quality — but we
+  are getting ahead.</p>
+
+  <h2>2. The round trip, concretely</h2>
+
+  <p>You send a request. Claude replies with a message whose <code>stop_reason</code> is
+  <code>"tool_use"</code> and whose <code>content</code> array contains a
+  <code>tool_use</code> block:</p>
+
+<pre><code>{
+  "stop_reason": "tool_use",
+  "content": [
+    {"type": "text", "text": "Let me look that up."},
+    {"type": "tool_use",
+     "id":   "toolu_01A09q90qw90lq917835lq9",
+     "name": "lookup_order",
+     "input": {"order_id": "ORD-12345"}}
+  ]
+}</code></pre>
+
+  <p>You run the lookup yourself, then send the result back as a <b>new user message</b>
+  containing a <code>tool_result</code> block. The <code>tool_use_id</code> must match the
+  <code>id</code> from the block above — that is what pairs a result to its request:</p>
+
+<pre><code>{"role": "user", "content": [
+    {"type": "tool_result",
+     "tool_use_id": "toolu_01A09q90qw90lq917835lq9",
+     "content": "{\"status\": \"delivered\", \"total\": 89.99}",
+     "is_error": false}
+]}</code></pre>
+
+  <div class="scroll-x">
+  <table class="blockspec">
+    <tr><th>Block</th><th>Direction</th><th>Key fields</th></tr>
+    <tr><td><code>tool_use</code></td><td>Claude → you</td>
+        <td><code>id</code>, <code>name</code>, <code>input</code></td></tr>
+    <tr><td><code>tool_result</code></td><td>you → Claude</td>
+        <td><code>tool_use_id</code>, <code>content</code>, <code>is_error</code></td></tr>
+  </table>
+  </div>
+
+  <div class="key">
+    <span class="key-label">The detail that trips people up</span>
+    <p>The assistant's turn must be appended to the conversation <b>unchanged</b>, including its
+    <code>tool_use</code> block, before you append the <code>tool_result</code>. The history
+    reads: user asks → assistant calls tool → user returns result → assistant reasons. Drop the
+    assistant turn and the <code>tool_use_id</code> refers to nothing.</p>
+  </div>
+
+  <h2>3. The loop itself</h2>
+
+  <p>Here is the entire agentic loop. There is no more to it than this:</p>
+
+<pre><code>messages = [{"role": "user", "content": "Why was order ORD-12345 refunded?"}]
+
+while True:
+    response = client.messages.create(
+        model="claude-opus-5", max_tokens=1024,
+        tools=tools, messages=messages,
+    )
+
+    # 1. Always append the assistant's turn, verbatim.
+    messages.append({"role": "assistant", "content": response.content})
+
+    # 2. THE decision. Nothing else terminates the loop.
+    if response.stop_reason != "tool_use":
+        break
+
+    # 3. Execute every tool_use block; collect every result.
+    results = []
+    for block in response.content:
+        if block.type == "tool_use":
+            results.append({
+                "type": "tool_result",
+                "tool_use_id": block.id,
+                "content": run_tool(block.name, block.input),
+            })
+
+    # 4. Feed results back so the model can reason about them.
+    messages.append({"role": "user", "content": results})</code></pre>
+
+  <div class="loopdiag">   ┌──────────────────────────────────────────────┐
+   │                                              │
+   ▼                                              │
+send messages ──► Claude ──► <b>stop_reason</b>?           │
+                                │                 │
+                 <b>"tool_use"</b> ────┤                 │
+                                │                 │
+                                ├──► execute tools│
+                                │                 │
+                                └──► append tool_result ─┘
+
+                 <i>"end_turn"</i> ────► done — return the text</div>
+
+  <p>Note step 3 collects <em>every</em> <code>tool_use</code> block. Claude can request several
+  tools in one turn, and they all belong in a single follow-up user message. Answering only the
+  first is a real bug — the API rejects a turn with unmatched tool calls.</p>
+
+  <h2>4. Every stop reason</h2>
+
+  <p>The exam concentrates on two, but knowing the full set is what stops you guessing:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Value</th><th>Meaning</th><th>What you do</th></tr>
+    <tr><td><code>tool_use</code></td><td>Claude wants a tool run</td><td><b>Loop again</b> with the results</td></tr>
+    <tr><td><code>end_turn</code></td><td>Claude finished naturally</td><td><b>Stop.</b> Use the response</td></tr>
+    <tr><td><code>max_tokens</code></td><td>Hit your <code>max_tokens</code> ceiling</td><td>Truncated — raise the limit or continue</td></tr>
+    <tr><td><code>stop_sequence</code></td><td>Emitted one of your <code>stop_sequences</code></td><td>Check which one fired</td></tr>
+    <tr><td><code>pause_turn</code></td><td>A server-tool loop hit its iteration cap</td><td>Send the turn back to continue</td></tr>
+    <tr><td><code>refusal</code></td><td>Declined on safety grounds</td><td>Inspect <code>stop_details</code></td></tr>
+    <tr><td><code>model_context_window_exceeded</code></td><td>Filled the context window</td><td>Treat as truncated</td></tr>
+  </table>
+  </div>
+
+  <p style="font-size:.86rem;color:var(--ink-faint)">Source:
+  <a href="https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons">Handling stop reasons</a>,
+  Claude platform docs.</p>
+
+  <h2>5. Why the anti-patterns are anti-patterns</h2>
+
+  <p>The blueprint names three specific wrong ways to terminate the loop
+  <span class="ts">TS 1.1</span>. Each fails for a mechanical reason worth understanding, not
+  memorising.</p>
+
+  <div class="pair">
+    <div class="dont">
+      <h4>Parsing text for a signal</h4>
+      <p>Looping until the reply contains "done" or "final answer". Natural language is
+      unconstrained — the model may say "I'm done searching" mid-investigation, or finish
+      without ever saying it. You have replaced a typed field with a guess.</p>
+    </div>
+    <div class="do">
+      <h4>Read <code>stop_reason</code></h4>
+      <p>A closed enum the API guarantees. It is the only signal that means what it says.</p>
+    </div>
+  </div>
+
+  <div class="pair">
+    <div class="dont">
+      <h4>An iteration cap as the mechanism</h4>
+      <p><code>for i in range(5)</code> as your termination logic. A task needing six tools is
+      silently truncated; a task needing one wastes nothing but tells you nothing. The cap is not
+      tracking whether the work finished.</p>
+    </div>
+    <div class="do">
+      <h4>A cap as a <em>safety net</em></h4>
+      <p>Keep a maximum to bound runaway cost — but <code>stop_reason</code> decides completion.
+      Hitting the cap is an error path, not a success path.</p>
+    </div>
+  </div>
+
+  <div class="pair">
+    <div class="dont">
+      <h4>Checking for text content</h4>
+      <p>"If the response has a text block, it's finished." False: a turn can contain both a text
+      block and a <code>tool_use</code> block — the example in section 2 does exactly that.
+      Claude often narrates before calling a tool.</p>
+    </div>
+    <div class="do">
+      <h4>Ignore content shape entirely</h4>
+      <p>Content tells you <em>what</em> to execute. <code>stop_reason</code> tells you
+      <em>whether</em> to continue. Different questions.</p>
+    </div>
+  </div>
+
+  <h2>6. Model-driven, not a decision tree</h2>
+
+  <p>The last idea in <span class="ts">TS 1.1</span> is conceptual. Because tool results re-enter
+  the conversation, Claude chooses each next action <em>with the previous results in context</em>.
+  A refund investigation might call <code>lookup_order</code>, discover the order was split across
+  two shipments, and call it again for the second — a path nobody enumerated in advance.</p>
+
+  <p>That is the difference between an <b>agent</b> and a <b>workflow</b>. A pre-configured tool
+  sequence is a workflow: predictable, cheaper, easier to test, and the right choice when the steps
+  genuinely are fixed. An agent trades that predictability for the ability to adapt. The exam
+  frequently asks you to choose between them, so hold both as legitimate.</p>
+
+  <div class="note">
+    <span class="note-label">Where this goes next</span>
+    <p>Lesson 02 takes this same loop and puts a second agent inside it: the coordinator calls a
+    subagent, which runs its own loop in an isolated context, and returns one message. Almost every
+    confusion about subagents comes from forgetting that the inner loop is <em>this</em> loop.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://platform.claude.com/docs/en/agents-and-tools/tool-use/overview">Tool use with Claude</a>
+    (Claude platform docs). Work through the <em>How tool use works</em> section in your own
+    language, then read
+    <a href="https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons">Handling stop reasons</a>.
+    If you have 30 minutes spare, actually build the loop in section 3 against two fake tools — the
+    exam rewards people who have felt the <code>tool_use_id</code> pairing go wrong.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> Good things to push on:
+    <em>"what happens if Claude calls two tools and one of them fails?"</em> (that is
+    <code>is_error</code>, and it is Domain 2), or <em>"when should I build a workflow instead of
+    an agent?"</em> — that judgement recurs throughout Domain 1.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 01</b> · Domain 1 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="../reference/00-exam-blueprint.html">Ref 00 — Blueprint</a>
+      <a href="../reference/01-api-mechanics.html">Ref 01 — API mechanics</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L01-agentic-loop',
+  title: 'Retrieval check — the agentic loop',
+  passMark: 0.72,
+  questions: [
+    {
+      ts: 'TS 1.1',
+      stem: 'Your agentic loop sends a request and Claude returns a message whose content array holds one text block and one tool_use block. What does your code do next?',
+      options: [
+        'Append the assistant turn unchanged, execute the tool, then append a user message containing a matching tool_result block.',
+        'Append only the text block to the history, execute the tool, then send the tool output as a plain user text message.',
+        'Treat the presence of a text block as the completed answer, since Claude produced prose alongside its tool request.',
+        'Execute the tool and send the result as a new assistant message so the history shows the tool ran successfully.'
+      ],
+      answer: 0,
+      why: 'The assistant turn goes back verbatim (its tool_use block carries the id), then the result returns in a user message as a tool_result block whose tool_use_id matches. Text alongside a tool call is normal narration, not completion.',
+      trap: 'Option C is the "check for text content" anti-pattern the blueprint names explicitly — a turn can hold both text and tool_use at once, which is exactly what this stem describes.'
+    },
+    {
+      ts: 'TS 1.1',
+      stem: 'Which value of stop_reason means your loop should execute work and iterate again, rather than returning a final answer to the caller?',
+      options: [
+        'tool_use',
+        'end_turn',
+        'max_tokens',
+        'stop_sequence'
+      ],
+      answer: 0,
+      why: 'stop_reason: "tool_use" means Claude has requested a tool and is waiting on results. end_turn means it finished. max_tokens and stop_sequence both mean the generation was cut short by a limit you set, not that more tool work is pending.',
+      trap: 'max_tokens looks like "there is more to do", and there is — but the fix is raising the limit or continuing the generation, not executing a tool.'
+    },
+    {
+      ts: 'TS 1.1',
+      stem: 'A colleague terminates the loop with "for i in range(5)" and no inspection of stop_reason. Beyond truncating long tasks, what is the deeper problem with this design?',
+      options: [
+        'The iteration count measures effort spent rather than whether the task completed, so it cannot distinguish success from truncation.',
+        'The iteration count prevents Claude from ever calling more than one tool inside any single conversational turn of the loop.',
+        'The iteration count causes the tool_use_id values to be reused across turns, which makes the API reject the follow-up messages.',
+        'The iteration count forces every tool result to be discarded before the model has any opportunity to reason about it.'
+      ],
+      answer: 0,
+      why: 'A cap is a budget, not a completion signal. When the loop exits you cannot tell whether Claude finished or simply ran out of iterations — so downstream code cannot know if the answer is trustworthy. Caps are legitimate as a cost safety net; the error is using one as the primary stopping mechanism.',
+      trap: 'B, C and D describe mechanical failures that do not actually follow from a loop cap — parallel tool calls, id generation and result handling are all unaffected by it.'
+    },
+    {
+      ts: 'TS 1.1',
+      stem: 'Claude returns a single turn containing three tool_use blocks. How should the results be returned?',
+      options: [
+        'One user message containing three tool_result blocks, each carrying the tool_use_id of the call it answers.',
+        'Three separate user messages in sequence, each containing one tool_result block for one of the three calls.',
+        'One user message containing the three outputs concatenated into a single tool_result block for the turn.',
+        'One user message answering the first call, since the remaining two are superseded once new information arrives.'
+      ],
+      answer: 0,
+      why: 'Parallel tool calls are answered together: a single user message whose content array holds one tool_result per tool_use, paired by tool_use_id. Every call in the turn must be answered — the API rejects a turn with unmatched tool calls.',
+      trap: 'Option D reflects a real intuition — later calls may look redundant once you see the first result — but you cannot leave a tool_use unanswered. Return all three, then let Claude reason about what mattered.'
+    },
+    {
+      ts: 'TS 1.1',
+      stem: 'What is the architectural consequence of appending tool results into the conversation history rather than handling them outside it?',
+      options: [
+        'Claude chooses each subsequent action with previous results in context, enabling paths no one enumerated in advance.',
+        'Claude is prevented from calling the same tool twice, because the earlier result already occupies the conversation history.',
+        'Claude executes the remaining tools itself without further round trips, because the results are now inside its own context.',
+        'Claude produces a deterministic sequence of tool calls, because the accumulated history constrains what it may select next.'
+      ],
+      answer: 0,
+      why: 'This is what makes it model-driven rather than a decision tree. Results in context mean the next choice is informed by what was just learned — the loop can discover a second shipment and look it up, a branch nobody hard-coded.',
+      trap: 'Option D inverts the point: more context makes behaviour more adaptive, not more deterministic. If you need determinism, that is an argument for a fixed workflow instead of an agent — a legitimate choice, but a different architecture.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

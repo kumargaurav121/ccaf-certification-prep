@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock 2 Debrief — Orchestration</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<link rel="stylesheet" href="../assets/diagram.css">
+<style>
+  .analogy {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 1.6rem 0;
+  }
+  .analogy > div { padding: 1rem 1.2rem; }
+  .analogy .life { background: var(--note-bg); border-right: 1px solid var(--rule); }
+  .analogy .tech { background: var(--paper); }
+  .analogy h4 { margin: 0 0 .6rem; font-family: var(--mono); font-size: .68rem;
+    letter-spacing: .12em; text-transform: uppercase; }
+  .analogy .life h4 { color: var(--ink-faint); }
+  .analogy .tech h4 { color: var(--accent); }
+  .analogy p { font-size: .88rem; margin: .5rem 0; }
+  @media (max-width: 38rem){ .analogy{grid-template-columns:1fr} .analogy .life{border-right:none;border-bottom:1px solid var(--rule)} }
+  .twocol { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:1.4rem 0; }
+  @media(max-width:38rem){.twocol{grid-template-columns:1fr}}
+  .missrow { border-left:3px solid var(--bad); background:var(--bad-bg); border-radius:4px;
+    padding:.7rem 1rem; margin:.7rem 0; font-size:.88rem; }
+  .missrow b { color: var(--bad); }
+  .fixrow { border-left:3px solid var(--good); background:var(--good-bg); border-radius:4px;
+    padding:.7rem 1rem; margin:.7rem 0 1.3rem; font-size:.88rem; }
+  .fixrow b { color: var(--good); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Mock 2 debrief · you passed — 732/1000</p>
+  <h1>The One Habit Costing You Domain 1</h1>
+  <p class="standfirst">You passed, and D2 and D5 jumped from failing to strong — the repair work
+  stuck. But Domain 1 held at 56%, and every miss shares one cause: when two options look right,
+  you reach for the one that names a <em>fancier mechanism</em>. This page fixes that, visually
+  and in plain terms.</p>
+
+  <div class="stats">
+    <div class="stat good"><span class="n">732</span><span class="l">scaled score · PASSED (cut 720)</span></div>
+    <div class="stat accent"><span class="n">D2 91% · D5 78%</span><span class="l">up from 36% / 45%</span></div>
+    <div class="stat bad"><span class="n">D1 56%</span><span class="l">7 of 16 wrong — today's target</span></div>
+  </div>
+
+  <h2>1. The trap, named</h2>
+
+  <p>Look at what you actually picked on the Domain 1 questions. In every case the correct answer
+  was <em>simpler</em>, and you chose an option that invented a more technical-sounding
+  mechanism:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Question</th><th>You picked (the elaborate one)</th><th>Correct (the simple one)</th></tr>
+    <tr><td>Coordinator won't delegate</td>
+      <td class="no">"a <code>tools</code> array blocks invocation"</td>
+      <td class="yes"><code>allowedTools</code> is missing <code>"Task"</code></td></tr>
+    <tr><td>Synthesis has no findings</td>
+      <td class="no">"context filled and <b>evicted</b> them"</td>
+      <td class="yes">coordinator never pasted them in</td></tr>
+    <tr><td>Run subagents in parallel</td>
+      <td class="no">"set <code>parallel:true</code> on each agent"</td>
+      <td class="yes">emit all Task calls in one response</td></tr>
+    <tr><td>Why route through coordinator</td>
+      <td class="no">"direct messaging isn't <b>supported</b>"</td>
+      <td class="yes">observability, error handling, control</td></tr>
+    <tr><td>Stale resumed session</td>
+      <td class="no">"sessions restore the <b>filesystem</b>"</td>
+      <td class="yes">sessions restore stale <em>conversation</em></td></tr>
+  </table>
+  </div>
+
+  <div class="key">
+    <span class="key-label">The rule that would have caught all five</span>
+    <p>When two answers both sound plausible, the exam almost always rewards the one that reflects
+    <b>how the system actually works</b> — which is usually the <em>simpler</em> one — and
+    manufactures the elaborate mechanism (<code>parallel:true</code>, "eviction", "not supported")
+    as the trap. <b>If an option invents a feature you've never actually seen, distrust it.</b></p>
+  </div>
+
+  <h2>2. The mental model that fixes most of Domain 1</h2>
+
+  <p>Five of your seven D1 misses come from one fuzzy picture: what a subagent can and cannot see.
+  Here is the model in one analogy.</p>
+
+  <div class="analogy">
+    <div class="life">
+      <h4>Real life</h4>
+      <p>You're a project manager. You hire a <b>freelancer</b> and email them a <b>brief</b>.</p>
+      <p>The freelancer <b>cannot see your inbox</b> — not your other emails, not what other
+      freelancers are doing, not your earlier notes. They have <em>only the brief you sent</em>.</p>
+      <p>If you want them to use research another freelancer did, you must <b>attach it to the
+      brief</b>. "Use the findings from before" means nothing — they never saw "before".</p>
+      <p>When they finish, they email you <b>one deliverable</b>. You read it. They don't email
+      each other; everything goes through you.</p>
+    </div>
+    <div class="tech">
+      <h4>Agent SDK</h4>
+      <p>You're the <b>coordinator</b>. You spawn a <b>subagent</b> via the Task tool with a
+      <b>prompt string</b>.</p>
+      <p>The subagent starts with a <b>fresh context</b> — no parent conversation, no parent tool
+      results, no sibling output. It has <em>only its system prompt + the Task prompt</em>.</p>
+      <p>To give it another agent's findings, you must <b>paste them into the Task prompt</b>.
+      "Use the sources found" means nothing — it never saw them.</p>
+      <p>It returns <b>one final message</b> to you. Subagents never talk to each other;
+      hub-and-spoke routes all of it through the coordinator.</p>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 660 250" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Coordinator sends each subagent only a Task prompt string. Each subagent has a sealed, fresh context and cannot see the parent's conversation, the parent's tool results, or its siblings. It returns one final message.">
+      <defs>
+        <marker id="ard" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+        </marker>
+      </defs>
+
+      <rect x="250" y="10" width="160" height="52" rx="6" class="accent-fill"/>
+      <text x="330" y="32" text-anchor="middle" font-size="12" font-weight="700" class="accent-text">COORDINATOR</text>
+      <text x="330" y="49" text-anchor="middle" font-size="9.5">holds the whole conversation</text>
+
+      <!-- three briefs -->
+      <line x1="290" y1="62" x2="120" y2="108" class="wire" marker-end="url(#ard)"/>
+      <line x1="330" y1="62" x2="330" y2="108" class="wire" marker-end="url(#ard)"/>
+      <line x1="370" y1="62" x2="540" y2="108" class="wire" marker-end="url(#ard)"/>
+      <text x="185" y="88" font-size="9" class="accent-text">Task prompt</text>
+      <text x="342" y="88" font-size="9" class="accent-text">Task prompt</text>
+      <text x="470" y="88" font-size="9" class="accent-text">Task prompt</text>
+
+      <!-- sealed subagents -->
+      <rect x="40" y="110" width="160" height="70" rx="6" class="box" stroke-dasharray="5 3"/>
+      <text x="120" y="130" text-anchor="middle" font-size="10.5" font-weight="600">search subagent</text>
+      <text x="120" y="147" text-anchor="middle" font-size="8.5" class="dim">fresh, sealed context</text>
+      <text x="120" y="162" text-anchor="middle" font-size="8.5" class="dim">sees ONLY its brief</text>
+
+      <rect x="250" y="110" width="160" height="70" rx="6" class="box" stroke-dasharray="5 3"/>
+      <text x="330" y="130" text-anchor="middle" font-size="10.5" font-weight="600">analysis subagent</text>
+      <text x="330" y="147" text-anchor="middle" font-size="8.5" class="dim">fresh, sealed context</text>
+      <text x="330" y="162" text-anchor="middle" font-size="8.5" class="dim">sees ONLY its brief</text>
+
+      <rect x="460" y="110" width="160" height="70" rx="6" class="box" stroke-dasharray="5 3"/>
+      <text x="540" y="130" text-anchor="middle" font-size="10.5" font-weight="600">synthesis subagent</text>
+      <text x="540" y="147" text-anchor="middle" font-size="8.5" class="dim">fresh, sealed context</text>
+      <text x="540" y="162" text-anchor="middle" font-size="8.5" class="dim">sees ONLY its brief</text>
+
+      <!-- no sibling link -->
+      <line x1="200" y1="145" x2="250" y2="145" class="wire dash" stroke="var(--bad)"/>
+      <text x="225" y="138" text-anchor="middle" font-size="14" class="bad-text">✗</text>
+      <line x1="410" y1="145" x2="460" y2="145" class="wire dash" stroke="var(--bad)"/>
+      <text x="435" y="138" text-anchor="middle" font-size="14" class="bad-text">✗</text>
+
+      <!-- returns -->
+      <line x1="120" y1="180" x2="300" y2="210" class="wire" marker-end="url(#ard)"/>
+      <line x1="330" y1="180" x2="330" y2="210" class="wire" marker-end="url(#ard)"/>
+      <line x1="540" y1="180" x2="360" y2="210" class="wire" marker-end="url(#ard)"/>
+      <text x="330" y="230" text-anchor="middle" font-size="9.5" class="good-text">each returns ONE final message ↑ to the coordinator</text>
+    </svg>
+    <p class="cap">sealed contexts · one channel in (the brief) · one message out · no sibling wires</p>
+  </div>
+
+  <p>Now watch all five misses dissolve into this one picture:</p>
+
+  <div class="missrow"><b>Q13 — "coordinator won't delegate."</b> You picked "the subagents' tools
+  array blocks it." But hiring the freelancer at all needs permission: the Task tool must be in
+  <code>allowedTools</code>. No permission to hire → the manager quietly does the job themselves.
+  A tools array just limits what the freelancer <em>can do once hired</em>.</div>
+  <div class="fixrow"><b>Fix:</b> "coordinator won't spawn subagents" → first check
+  <code>allowedTools</code> includes <code>"Task"</code>.</div>
+
+  <div class="missrow"><b>Q14 — "synthesis has no findings."</b> You picked "its context filled and
+  evicted them." But it was never <em>given</em> them — the freelancer wasn't emailed the research.
+  Nothing to evict; the brief simply didn't contain it. Context isn't silently dropped after
+  spawn.</div>
+  <div class="fixrow"><b>Fix:</b> "subagent ignored prior findings" → the coordinator didn't paste
+  them into the Task prompt. Always the first suspect.</div>
+
+  <div class="missrow"><b>Q17 — "run them in parallel."</b> You picked "set <code>parallel:true</code>
+  on each agent." That flag doesn't exist. Parallel = mail all three briefs <em>in the same
+  outgoing batch</em>: emit all three Task calls in <b>one</b> coordinator response.</div>
+  <div class="fixrow"><b>Fix:</b> parallel subagents = multiple Task calls in a single turn (same
+  mechanic as parallel tool calls). One-per-turn is accidentally sequential.</div>
+
+  <div class="missrow"><b>Q60 — "why route through the coordinator?"</b> You picked "direct
+  messaging isn't supported." The reason is a design choice, not a technical limit: routing
+  through the manager gives <b>observability, consistent error handling, and controlled
+  information flow</b> — the manager decides what each freelancer sees.</div>
+  <div class="fixrow"><b>Fix:</b> hub-and-spoke exists for observability + error handling +
+  controlled flow. (It costs <em>more</em> tokens, not fewer — you pay that for control.)</div>
+
+  <h2>3. Two more D1 concepts, made concrete</h2>
+
+  <div class="twocol">
+    <div>
+      <h3>Q54 · Fixed chain vs adaptive</h3>
+      <p><b>The test:</b> can you list the steps <em>before you start</em>?</p>
+      <p><b>Yes → fixed prompt chain.</b> "Check formatting, then citations, then facts" — you
+      know all three aspects up front. A fixed sequence of focused passes: predictable, testable,
+      and it dodges the attention-dilution of one big combined pass.</p>
+      <p><b>No → adaptive.</b> "Add tests to a legacy codebase" — the next step depends on what
+      you discover. You picked <em>adaptive</em> for the review, but its aspects were known in
+      advance. Known list → chain.</p>
+    </div>
+    <div>
+      <h3>Q59 · What a session stores</h3>
+      <p><b>A session saves the conversation, not the files.</b> Resume it and you restore what
+      the agent <em>knew</em> — every old tool result — not what the code <em>is</em> now.</p>
+      <p>So a week-old resume replays <em>stale</em> reads: it "remembers" function signatures
+      that no longer exist, and has no reason to doubt them. You picked the exact opposite
+      ("sessions restore the old filesystem") — that's backwards.</p>
+      <p><b>Fix for stale results:</b> start fresh, inject a short summary of the conclusions that
+      are still true, let it re-read the rest.</p>
+    </div>
+  </div>
+
+  <h2>4. Two old reflexes came back — spot them</h2>
+
+  <div class="missrow"><b>Q4 (escalation).</b> "Third time I've contacted you and I am furious" —
+  routine damaged-item replacement. You escalated immediately. That's the <b>sentiment trap</b>:
+  anger is not a complexity signal. Frustration + a fixable issue → <em>acknowledge and resolve</em>;
+  escalate only on an explicit demand for a human, or a real policy gap.</div>
+
+  <div class="missrow"><b>Q45 (batch failures).</b> 6 failed docs; you chose "accept the 2
+  transient losses." Never abandon recoverable work — a transient failure clears on a plain
+  retry. Resubmit <em>all</em> failures by <code>custom_id</code>: chunk the oversized ones,
+  retry the transient ones.</div>
+
+  <h2>5. The scattered singles — one line each</h2>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Q</th><th>Concept</th><th>The simple correct answer</th></tr>
+    <tr><td>Q20 · 2.4</td><td>catalog of collections</td>
+      <td>MCP <b>resources</b> (a catalog to read) — not a <code>list_collections</code> <em>tool</em></td></tr>
+    <tr><td>Q21 · 5.4</td><td>crash recovery</td>
+      <td>agents export state to a <b>manifest</b> — not replaying the full transcript byte-for-byte</td></tr>
+    <tr><td>Q26 · 3.1</td><td><code>@import</code> paths</td>
+      <td>resolve relative to <b>the importing file</b>, not the working directory</td></tr>
+    <tr><td>Q29 · 3.2</td><td>skill floods context</td>
+      <td><code>context: fork</code> (isolates output) — not <code>disable-model-invocation</code></td></tr>
+    <tr><td>Q30 · 4.1</td><td>review nitpicks</td>
+      <td>categorical <b>criteria</b> (report bugs/security, skip style) — not repeating "be conservative"</td></tr>
+    <tr><td>Q41 · 4.3</td><td>unknown doc type</td>
+      <td><code>tool_choice: "any"</code> — not forcing the most common schema</td></tr>
+    <tr><td>Q58 · 3.5</td><td>interacting fixes</td>
+      <td>describe the two interacting loop bugs <b>in one message</b>; the CSS typo is separate</td></tr>
+  </table>
+  </div>
+
+  <p>Notice the through-line even here: Q20, Q21, Q29, Q41 are all the same habit — you picked the
+  more elaborate mechanism (a new tool, a full replay, a different flag, a manual force) over the
+  simpler feature that already exists for the job.</p>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="ask">
+    <strong>You're exam-ready — this is polish.</strong> 732 with D2/D5 fixed means the plan
+    worked; turning D1's 56% into 75%+ is your safety margin. Clear this quiz, then it's fair to
+    book Pearson VUE. Ask me about any row above that still feels arbitrary.
+  </div>
+
+  <div class="foot">
+    <p><b>Mock 2 debrief</b> · from your 732/1000 attempt (2026-09-07)</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="../lessons/0002-coordinator-and-subagents.html">L02 Coordinator &amp; Subagents</a>
+      <a href="../mocks/mock2.html">Retake Mock 2</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'DRILL-mock2-debrief',
+  title: 'Re-test — the orchestration model &amp; the elaborate-mechanism trap',
+  passMark: 0.85,
+  questions: [
+    {
+      ts: '1.3',
+      stem: 'A coordinator with three well-described subagents keeps answering questions itself instead of delegating. Which is the first thing to check?',
+      options: [
+        'That allowedTools includes "Task", since subagents are spawned through the Task tool.',
+        'That each subagent’s tools array is non-empty, since an empty one blocks invocation.',
+        'That each AgentDefinition sets a model, since subagents cannot instantiate without one.',
+        'That the coordinator prompt lists procedures, since goal-only prompts suppress delegation.'
+      ],
+      answer: 0,
+      why: 'Hiring the freelancer at all needs permission: the Task tool must be in allowedTools, or Claude silently does the work itself. A tools array limits what a subagent can do once spawned; model is optional.',
+      trap: 'The "tools array blocks invocation" option (your Mock 2 pick) invents a mechanism — tools restrict capability, not whether the agent can be called.'
+    },
+    {
+      ts: '1.3',
+      stem: 'A synthesis subagent writes reports that say "per the sources gathered" but contain no actual findings, though the search subagent returned good results to the coordinator. Why?',
+      options: [
+        'The coordinator never included the findings in the synthesis subagent’s Task prompt — subagents inherit no parent context.',
+        'The synthesis subagent’s context window filled and evicted the findings it was given at spawn.',
+        'The search and synthesis subagents were given conflicting system prompts that voided the data.',
+        'The findings exceeded the size a single Task tool call is able to carry to a subagent.'
+      ],
+      answer: 0,
+      why: 'A subagent starts with a fresh, sealed context. The only channel in is the Task prompt string. If the coordinator did not paste the findings in, synthesis never saw them — there is nothing to evict.',
+      trap: '"Context filled and evicted" (your pick) assumes the data arrived and was dropped. It never arrived: the brief did not contain it.'
+    },
+    {
+      ts: '1.3',
+      stem: 'To run three independent subagents concurrently instead of one after another, the coordinator must:',
+      options: [
+        'Emit all three Task tool calls within a single response.',
+        'Set a parallel:true flag on each of the three AgentDefinition entries.',
+        'Emit one Task call per turn across three turns for the runtime to batch.',
+        'Spawn one subagent and have it spawn the other two from inside its context.'
+      ],
+      answer: 0,
+      why: 'Parallel = mail all the briefs in one batch: multiple Task tool_use blocks in a single coordinator response, exactly like parallel tool calls. Wall-clock becomes the slowest, not the sum.',
+      trap: 'parallel:true (your pick) is an invented flag. One Task call per turn is accidentally sequential — same output, sum of latencies.'
+    },
+    {
+      ts: '1.2',
+      stem: 'Why is all inter-subagent communication routed through the coordinator rather than subagents talking to each other directly?',
+      options: [
+        'For observability, consistent error handling, and controlled information flow.',
+        'Because direct subagent-to-subagent messaging is not technically supported.',
+        'Because subagents share one context window that would otherwise desynchronise.',
+        'To compress messages in transit and reduce the system’s total token cost.'
+      ],
+      answer: 0,
+      why: 'Hub-and-spoke is a design choice: the coordinator gets one place to observe delegation, one error-handling policy, and control over what each subagent sees. It costs more tokens, not fewer.',
+      trap: '"Not technically supported" (your pick) frames a deliberate architecture as a limitation. Subagents also do not share a context window.'
+    },
+    {
+      ts: '1.7',
+      stem: 'You resume a week-old analysis session and the agent confidently cites function signatures that no longer exist. What happened, and the fix?',
+      options: [
+        'A session restores stale conversation (old tool results); start fresh and inject a summary of the still-true conclusions.',
+        'A session restores the old filesystem state; discard the current working-tree changes to match it.',
+        'The session transcript expired and truncated; resume again with a longer retention window.',
+        'Sessions cannot resume across processes; recapture the session id and resume once more.'
+      ],
+      answer: 0,
+      why: 'A session persists the conversation, not the filesystem. Resuming replays old tool results the model has no reason to doubt. When results are stale, a fresh session with a conclusions summary is more reliable.',
+      trap: '"Restores the old filesystem" (your pick) is exactly backwards — sessions never touch files. That inversion is worth burning in.'
+    },
+    {
+      ts: '1.6',
+      stem: 'A document review must check formatting, citations, and factual consistency. All three aspects are known up front and independent. Which decomposition?',
+      options: [
+        'Prompt chaining — a fixed sequence of focused passes, one per aspect.',
+        'Adaptive decomposition — generate the aspects to check from each document’s content.',
+        'A single combined pass instructing the model to check all three aspects thoroughly.',
+        'One subagent that decides at runtime which aspects merit checking per document.'
+      ],
+      answer: 0,
+      why: 'If you can list the steps before starting, use a fixed prompt chain — predictable, testable, and it avoids the attention dilution of one combined pass. Adaptive is for open-ended work where the next step depends on findings.',
+      trap: 'Adaptive (your pick) is for unknown structure. Here the three aspects are named in the prompt — a known list means a chain.'
+    },
+    {
+      ts: '5.2',
+      stem: 'A customer writes "third time contacting you, I am furious" about a standard damaged-item replacement with photo evidence. Best action?',
+      options: [
+        'Acknowledge the frustration and resolve the replacement; escalate only if they then demand a human.',
+        'Escalate immediately — a customer furious after three contacts clearly needs a human agent.',
+        'Run sentiment analysis and auto-escalate because negative sentiment exceeds the threshold.',
+        'Ask the customer to confirm they do not want a human before completing the replacement.'
+      ],
+      answer: 0,
+      why: 'Sentiment is not a complexity signal. The case is within policy and capability, so resolve it warmly; escalate only on an explicit demand for a human or a genuine policy gap.',
+      trap: 'Escalating on fury (your pick) is the sentiment trap — it also throws away first-contact resolution on a case the agent can close.'
+    },
+    {
+      ts: '4.5',
+      stem: 'A 100-document batch returns 6 failures: 4 exceeded context, 2 were transient. Correct follow-up?',
+      options: [
+        'Resubmit only the 6 by custom_id — chunk the 4 oversized, plain-retry the 2 transient.',
+        'Resubmit the 4 oversized documents chunked and accept the 2 transient failures as lost.',
+        'Resubmit all 100 documents pre-chunked so every request comfortably fits.',
+        'Resubmit the 6 through the synchronous API, since batch retries only repeat failures.'
+      ],
+      answer: 0,
+      why: 'custom_id identifies the failed pairs; resubmit only those with cause-addressing changes. Transient failures clear on a plain retry — never abandon recoverable work.',
+      trap: 'Accepting the 2 transient losses (your pick) discards work a simple retry recovers. Resubmitting all 100 doubles cost for the 94 that succeeded.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

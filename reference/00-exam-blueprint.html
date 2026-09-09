@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCAR-F Exam Blueprint — Reference</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<style>
+  .weights { font-family: var(--sans); }
+  .bar-cell { width: 40%; }
+  .bar { height: 9px; background: var(--accent); border-radius: 2px; display: block; }
+  .bar-track { background: var(--rule-soft); border-radius: 2px; display: block; }
+  .ts-list { list-style: none; padding: 0; margin: 0 0 1.6rem; }
+  .ts-list li {
+    display: grid; grid-template-columns: 4.2rem 1fr; gap: .8rem;
+    padding: .5rem 0; border-bottom: 1px solid var(--rule-soft);
+    font-size: .92rem; line-height: 1.5;
+  }
+  .ts-list li:last-child { border-bottom: none; }
+  .ts-list .n {
+    font-family: var(--mono); font-size: .72rem; color: var(--accent);
+    font-weight: 600; padding-top: .18em;
+  }
+  .dom-head {
+    display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap;
+    margin: 2.6rem 0 .8rem; padding-bottom: .35rem;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .dom-head h2 { margin: 0; padding: 0; border: none; }
+  .dom-head .w {
+    font-family: var(--mono); font-size: .78rem; font-weight: 600;
+    color: var(--accent); background: var(--accent-bg);
+    border: 1px solid currentColor; border-radius: 3px; padding: .1em .5em;
+  }
+  .dom-head .est { font-family: var(--mono); font-size: .72rem; color: var(--ink-faint); }
+  .cols { columns: 2; column-gap: 2rem; font-size: .88rem; }
+  .cols ul { margin: 0; padding-left: 1.2rem; }
+  .cols li { break-inside: avoid; margin-bottom: .35rem; }
+  @media (max-width: 40rem) { .cols { columns: 1; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Reference · 00</p>
+  <h1>CCAR-F Exam Blueprint</h1>
+  <p class="standfirst">Everything the exam measures, on one page. Every claim here is taken
+  directly from the official Exam Guide v1.0 — this is the map you revise against.</p>
+
+  <div class="meta">
+    <span><b>Exam code</b> CCAR-F</span>
+    <span><b>Items</b> 60</span>
+    <span><b>Time</b> 120 min</span>
+    <span><b>Pass</b> 720 / 1000</span>
+    <span><b>Fee</b> $125</span>
+    <span><b>Valid</b> 12 months</span>
+  </div>
+
+  <h2>Logistics</h2>
+  <div class="scroll-x">
+  <table>
+    <tr><th>Item</th><th>Detail</th></tr>
+    <tr><td>Format</td><td>Multiple-choice <em>and</em> multiple-response. Each item states how many to select.</td></tr>
+    <tr><td>Structure</td><td><b>4 scenarios drawn at random from a bank of 6.</b></td></tr>
+    <tr><td>Delivery</td><td>Pearson VUE — online proctored or test centre. Closed book, no notes, no AI.</td></tr>
+    <tr><td>Scoring</td><td>Criterion-referenced, scaled 100–1000. Cut score 720. Set by a formal standard-setting study.</td></tr>
+    <tr><td>Reporting</td><td>Pass/fail + scaled score + <em>percent correct by domain</em>. Domain percentages are informational only — the total scaled score decides.</td></tr>
+    <tr><td>Retakes</td><td>14 days after 1st fail, 30 after 2nd, 90 after 3rd. Max 4 attempts / rolling 12 months. Fee each time.</td></tr>
+    <tr><td>Reschedule</td><td>Free up to 24 h before. Inside 24 h forfeits the fee.</td></tr>
+    <tr><td>ID</td><td>Government photo ID; name must match registration <em>exactly</em>.</td></tr>
+    <tr><td>Renewal</td><td>Free non-proctored assessment before the 12 months lapse. Lapse = full exam at full fee.</td></tr>
+  </table>
+  </div>
+
+  <div class="key">
+    <span class="key-label">The structural fact that matters most</span>
+    <p>Because only <b>4 of 6 scenarios</b> appear, you cannot game the exam by mastering
+    one scenario. But the six scenarios map onto a small set of recurring architectural
+    decisions — learn the <em>decisions</em>, and every scenario is the same exam.</p>
+  </div>
+
+  <h2>Domain weights</h2>
+  <div class="scroll-x">
+  <table class="weights">
+    <tr><th>#</th><th>Domain</th><th>Weight</th><th class="bar-cell">Share</th><th>≈ items</th></tr>
+    <tr><td>1</td><td>Agentic Architecture &amp; Orchestration</td><td>27%</td>
+      <td><span class="bar-track"><span class="bar" style="width:100%"></span></span></td><td>≈16</td></tr>
+    <tr><td>3</td><td>Claude Code Configuration &amp; Workflows</td><td>20%</td>
+      <td><span class="bar-track"><span class="bar" style="width:74%"></span></span></td><td>≈12</td></tr>
+    <tr><td>4</td><td>Prompt Engineering &amp; Structured Output</td><td>20%</td>
+      <td><span class="bar-track"><span class="bar" style="width:74%"></span></span></td><td>≈12</td></tr>
+    <tr><td>2</td><td>Tool Design &amp; MCP Integration</td><td>18%</td>
+      <td><span class="bar-track"><span class="bar" style="width:67%"></span></span></td><td>≈11</td></tr>
+    <tr><td>5</td><td>Context Management &amp; Reliability</td><td>15%</td>
+      <td><span class="bar-track"><span class="bar" style="width:56%"></span></span></td><td>≈9</td></tr>
+  </table>
+  </div>
+  <p style="font-size:.85rem;color:var(--ink-faint)">Item counts are estimates from the
+  weights against 60 items; the guide states weights, not counts.</p>
+
+  <h2>The six scenarios</h2>
+  <div class="scroll-x">
+  <table>
+    <tr><th>#</th><th>Scenario</th><th>Primary domains</th></tr>
+    <tr><td>1</td><td><b>Customer Support Resolution Agent.</b> Agent SDK; returns/billing/account disputes;
+      MCP tools <code>get_customer</code>, <code>lookup_order</code>, <code>process_refund</code>,
+      <code>escalate_to_human</code>; 80%+ first-contact resolution target.</td><td>1, 2, 5</td></tr>
+    <tr><td>2</td><td><b>Code Generation with Claude Code.</b> Team workflow; slash commands,
+      CLAUDE.md, plan mode vs direct execution.</td><td>3, 5</td></tr>
+    <tr><td>3</td><td><b>Multi-Agent Research System.</b> Coordinator + search / analysis /
+      synthesis / report subagents; cited reports.</td><td>1, 2, 5</td></tr>
+    <tr><td>4</td><td><b>Developer Productivity.</b> Codebase exploration, legacy systems,
+      boilerplate; built-in tools + MCP servers.</td><td>2, 3, 1</td></tr>
+    <tr><td>5</td><td><b>Claude Code for CI.</b> Automated review, test generation, PR feedback;
+      actionable output, minimal false positives.</td><td>3, 4</td></tr>
+    <tr><td>6</td><td><b>Structured Data Extraction.</b> Unstructured docs → JSON schema
+      validated output; edge cases; downstream integration.</td><td>4, 5</td></tr>
+  </table>
+  </div>
+
+  <!-- ============ DOMAIN 1 ============ -->
+  <div class="dom-head"><h2>Domain 1 — Agentic Architecture &amp; Orchestration</h2>
+    <span class="w">27%</span><span class="est">7 task statements · ≈16 items</span></div>
+  <ul class="ts-list">
+    <li><span class="n">TS 1.1</span><span>Design and implement <b>agentic loops</b> for autonomous task execution.
+      Continue on <code>stop_reason: "tool_use"</code>, terminate on <code>"end_turn"</code>. Append tool results to history.</span></li>
+    <li><span class="n">TS 1.2</span><span><b>Orchestrate multi-agent systems</b> with coordinator–subagent (hub-and-spoke) patterns.
+      Dynamic subagent selection, scope partitioning, iterative refinement loops.</span></li>
+    <li><span class="n">TS 1.3</span><span>Configure <b>subagent invocation, context passing, and spawning</b>.
+      <code>Task</code> tool, <code>allowedTools</code> must include <code>"Task"</code>, explicit context, <code>AgentDefinition</code>, parallel spawning.</span></li>
+    <li><span class="n">TS 1.4</span><span>Multi-step workflows with <b>enforcement and handoff</b>.
+      Programmatic prerequisite gates vs prompt guidance; structured escalation handoffs.</span></li>
+    <li><span class="n">TS 1.5</span><span>Apply <b>Agent SDK hooks</b> for tool call interception and data normalisation.
+      <code>PostToolUse</code> for normalising results; interception for blocking policy violations.</span></li>
+    <li><span class="n">TS 1.6</span><span>Design <b>task decomposition</b> strategies. Fixed prompt chaining vs dynamic
+      adaptive decomposition; per-file + cross-file review passes.</span></li>
+    <li><span class="n">TS 1.7</span><span>Manage <b>session state, resumption, forking</b>. <code>--resume &lt;name&gt;</code>,
+      <code>fork_session</code>, and when a fresh session with an injected summary beats resuming stale context.</span></li>
+  </ul>
+
+  <!-- ============ DOMAIN 2 ============ -->
+  <div class="dom-head"><h2>Domain 2 — Tool Design &amp; MCP Integration</h2>
+    <span class="w">18%</span><span class="est">5 task statements · ≈11 items</span></div>
+  <ul class="ts-list">
+    <li><span class="n">TS 2.1</span><span>Design <b>tool interfaces</b> with clear descriptions and boundaries.
+      Descriptions are the primary tool-selection mechanism; eliminate overlap; split generic tools.</span></li>
+    <li><span class="n">TS 2.2</span><span>Implement <b>structured error responses</b>. MCP <code>isError</code>;
+      <code>errorCategory</code> (transient / validation / business / permission), <code>isRetryable</code>.</span></li>
+    <li><span class="n">TS 2.3</span><span><b>Distribute tools</b> across agents and configure <code>tool_choice</code>.
+      Too many tools degrades selection; scoped access; <code>"auto"</code> / <code>"any"</code> / forced.</span></li>
+    <li><span class="n">TS 2.4</span><span><b>Integrate MCP servers</b>. Project <code>.mcp.json</code> vs user <code>~/.claude.json</code>;
+      <code>${ENV_VAR}</code> expansion; MCP <em>resources</em> as content catalogs.</span></li>
+    <li><span class="n">TS 2.5</span><span>Select <b>built-in tools</b>: Read, Write, Edit, Bash, Grep, Glob —
+      Grep for content, Glob for paths, Read+Write when Edit's anchor isn't unique.</span></li>
+  </ul>
+
+  <!-- ============ DOMAIN 3 ============ -->
+  <div class="dom-head"><h2>Domain 3 — Claude Code Configuration &amp; Workflows</h2>
+    <span class="w">20%</span><span class="est">6 task statements · ≈12 items</span></div>
+  <ul class="ts-list">
+    <li><span class="n">TS 3.1</span><span><b>CLAUDE.md hierarchy</b>: user (<code>~/.claude/CLAUDE.md</code>), project, directory.
+      <code>@import</code> for modularity; <code>.claude/rules/</code>; <code>/memory</code> to diagnose.</span></li>
+    <li><span class="n">TS 3.2</span><span><b>Slash commands and skills</b>. <code>.claude/commands/</code> (project, versioned) vs
+      <code>~/.claude/commands/</code>; SKILL.md frontmatter <code>context: fork</code>, <code>allowed-tools</code>, <code>argument-hint</code>.</span></li>
+    <li><span class="n">TS 3.3</span><span><b>Path-specific rules</b>. <code>.claude/rules/</code> with YAML <code>paths:</code> globs —
+      beats directory CLAUDE.md when files are spread across the tree.</span></li>
+    <li><span class="n">TS 3.4</span><span><b>Plan mode vs direct execution</b>. Plan for architectural/multi-file/multi-approach;
+      direct for well-scoped single changes. <code>Explore</code> subagent for verbose discovery.</span></li>
+    <li><span class="n">TS 3.5</span><span><b>Iterative refinement</b>. Concrete I/O examples, test-driven iteration,
+      the interview pattern; batch interacting fixes, sequence independent ones.</span></li>
+    <li><span class="n">TS 3.6</span><span><b>CI/CD integration</b>. <code>-p</code>/<code>--print</code>,
+      <code>--output-format json</code>, <code>--json-schema</code>; CLAUDE.md as CI context; independent review instance.</span></li>
+  </ul>
+
+  <!-- ============ DOMAIN 4 ============ -->
+  <div class="dom-head"><h2>Domain 4 — Prompt Engineering &amp; Structured Output</h2>
+    <span class="w">20%</span><span class="est">6 task statements · ≈12 items</span></div>
+  <ul class="ts-list">
+    <li><span class="n">TS 4.1</span><span><b>Explicit criteria</b> to raise precision. Categorical criteria beat
+      "be conservative" / "only high-confidence". False positives destroy developer trust.</span></li>
+    <li><span class="n">TS 4.2</span><span><b>Few-shot prompting</b>. 2–4 targeted examples for ambiguous cases;
+      show reasoning; generalises to novel patterns; reduces extraction hallucination.</span></li>
+    <li><span class="n">TS 4.3</span><span><b>Structured output via tool_use</b> + JSON schema. Eliminates syntax errors,
+      not semantic ones. Nullable fields prevent fabrication; enum + "other"/detail for extensibility.</span></li>
+    <li><span class="n">TS 4.4</span><span><b>Validation, retry, feedback loops</b>. Retry with the specific validation error.
+      Retry fails when the information is simply absent from the source.</span></li>
+    <li><span class="n">TS 4.5</span><span><b>Batch processing</b>. Message Batches API: 50% cheaper, ≤24 h, no latency SLA,
+      <code>custom_id</code> correlation, <b>no multi-turn tool calling</b>. Never for blocking workflows.</span></li>
+    <li><span class="n">TS 4.6</span><span><b>Multi-instance / multi-pass review</b>. An independent instance beats
+      self-review; per-file passes + a cross-file integration pass beat one big pass.</span></li>
+  </ul>
+
+  <!-- ============ DOMAIN 5 ============ -->
+  <div class="dom-head"><h2>Domain 5 — Context Management &amp; Reliability</h2>
+    <span class="w">15%</span><span class="est">6 task statements · ≈9 items</span></div>
+  <ul class="ts-list">
+    <li><span class="n">TS 5.1</span><span><b>Preserve information across long interactions</b>. Persistent "case facts" block;
+      trim verbose tool output; mitigate <em>lost in the middle</em> by position-aware ordering.</span></li>
+    <li><span class="n">TS 5.2</span><span><b>Escalation and ambiguity</b>. Escalate on explicit request, policy gap, or no progress.
+      Sentiment and self-reported confidence are <em>not</em> valid triggers. Multiple matches → ask, don't guess.</span></li>
+    <li><span class="n">TS 5.3</span><span><b>Error propagation</b> across agents. Structured error context; distinguish
+      access failure from valid empty result; never silently suppress, never kill the whole workflow.</span></li>
+    <li><span class="n">TS 5.4</span><span><b>Large codebase exploration</b>. Scratchpad files, subagent delegation,
+      summarise-then-spawn, crash-recovery manifests, <code>/compact</code>.</span></li>
+    <li><span class="n">TS 5.5</span><span><b>Human review &amp; confidence calibration</b>. Aggregate accuracy hides
+      per-segment failure; stratified sampling; field-level confidence calibrated on labelled sets.</span></li>
+    <li><span class="n">TS 5.6</span><span><b>Provenance &amp; uncertainty</b>. Claim–source mappings survive synthesis;
+      annotate conflicts rather than picking one; carry publication dates; render by content type.</span></li>
+  </ul>
+
+  <h2>In scope vs out of scope</h2>
+  <p>The guide lists these explicitly. Anything on the right is <b>wasted study time</b>.</p>
+  <div class="pair">
+    <div class="do">
+      <h4>Tested</h4>
+      <ul>
+        <li>Agentic loop control flow, <code>stop_reason</code></li>
+        <li>Coordinator–subagent orchestration, parallel Task calls</li>
+        <li>Explicit subagent context passing, crash manifests</li>
+        <li>Tool description quality; split vs consolidate</li>
+        <li>MCP tools vs resources; project vs user scope</li>
+        <li>Structured errors; transient/business/permission</li>
+        <li>Escalation criteria and policy gaps</li>
+        <li>CLAUDE.md hierarchy, <code>@import</code>, rules globs</li>
+        <li>Commands &amp; skills scope + frontmatter</li>
+        <li>Plan mode vs direct execution</li>
+        <li>Iterative refinement patterns</li>
+        <li><code>tool_use</code> schemas, <code>tool_choice</code>, nullable fields</li>
+        <li>Few-shot for ambiguity and false positives</li>
+        <li>Batch API suitability, <code>custom_id</code> failure handling</li>
+        <li>Context trimming, fact extraction, input ordering</li>
+        <li>Confidence calibration, stratified sampling</li>
+        <li>Claim–source mappings, temporal data, conflicts</li>
+      </ul>
+    </div>
+    <div class="dont">
+      <h4>Not tested — skip</h4>
+      <ul>
+        <li>Fine-tuning / training custom models</li>
+        <li>API auth, billing, account management</li>
+        <li>Language/framework implementation detail</li>
+        <li>Deploying or hosting MCP servers</li>
+        <li>Claude's internal architecture / weights</li>
+        <li>Constitutional AI, RLHF, safety training</li>
+        <li>Embeddings, vector databases</li>
+        <li>Computer use / browser automation</li>
+        <li>Vision and image analysis</li>
+        <li>Streaming, server-sent events</li>
+        <li>Rate limits, quotas, pricing math</li>
+        <li>OAuth, key rotation, auth protocols</li>
+        <li>AWS / GCP / Azure specifics</li>
+        <li>Benchmarking, model comparison</li>
+        <li>Prompt caching <em>implementation</em> (know it exists)</li>
+        <li>Tokenisation / token-counting algorithms</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="source">
+    <span class="source-label">Primary source</span>
+    <p><a href="exam-guide-v1.0.pdf">Claude Certified Architect – Foundations Exam Guide v1.0</a>
+    (local copy; <a href="exam-guide-v1.0.txt">plain text</a>). Read sections 5, 6 and 17 in full
+    before exam day. Section 9 contains twelve real sample items with the examiners' own rationales —
+    the single best signal about how the exam reasons.</p>
+  </div>
+
+  <div class="foot">
+    <p><b>Reference 00</b> · Claude Certified Architect – Foundations · built 2026-08-10</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="../lessons/0001-the-agentic-loop.html">Lesson 01 — The Agentic Loop</a>
+      <a href="01-api-mechanics.html">Ref 01 — API mechanics</a>
+      <a href="exam-guide-v1.0.pdf">Official guide (PDF)</a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

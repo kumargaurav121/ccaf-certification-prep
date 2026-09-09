@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 10 — Refinement &amp; CI/CD</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 3 · Lesson 10 of 16 · closes Domain 3</p>
+  <h1>Refinement &amp; CI/CD</h1>
+  <p class="standfirst">Two halves: how to steer Claude toward the output you actually wanted —
+  and how to run it unattended in a pipeline, where nobody is there to steer at all.</p>
+
+  <div class="meta">
+    <span><b>Domain 3</b> Claude Code Configuration &amp; Workflows · 20%</span>
+    <span><b>Covers</b> TS 3.5, TS 3.6</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. Iterative refinement: four named patterns</h2>
+
+  <p><span class="ts">TS 3.5</span> names four techniques. Each solves a specific
+  communication failure — knowing <em>which failure</em> each fixes is what the exam tests.</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Pattern</th><th>The failure it fixes</th><th>How</th></tr>
+    <tr><td><b>Concrete I/O examples</b></td>
+      <td>Prose descriptions interpreted inconsistently</td>
+      <td>2–3 input → expected-output pairs; the transformation becomes unambiguous</td></tr>
+    <tr><td><b>Test-driven iteration</b></td>
+      <td>"Improve it" loops that wander</td>
+      <td>Write the test suite first — expected behaviour, edge cases, performance — then
+        iterate by sharing failures</td></tr>
+    <tr><td><b>Interview pattern</b></td>
+      <td>Requirements you didn't know you had</td>
+      <td>Have Claude ask questions <em>before</em> implementing — surfacing cache invalidation,
+        failure modes, constraints you hadn't considered</td></tr>
+    <tr><td><b>Batch vs sequential fixes</b></td>
+      <td>Fixes that undo each other</td>
+      <td>Interacting problems → one detailed message; independent problems → fix sequentially</td></tr>
+  </table>
+  </div>
+
+  <p>Worked micro-examples of the two least obvious:</p>
+
+  <ul>
+    <li><b>I/O examples.</b> "Normalise the phone numbers" produced three inconsistent formats
+      across runs. Show it: <code>"(415) 555-0132" → "+14155550132"</code>,
+      <code>"07911 123456" → "+447911123456"</code>. Ambiguity gone — including the UK case the
+      prose never mentioned. The blueprint's version: fixing null-handling in a migration script
+      by giving a test case with example input and expected output.</li>
+    <li><b>Interacting vs independent.</b> A pagination bug and an off-by-one in the same loop
+      <em>interact</em> — fixing them one at a time invites each fix to break the other, so
+      describe both in one message. A CSS typo and a broken API route are <em>independent</em> —
+      sequential is cleaner, one verified fix at a time.</li>
+  </ul>
+
+  <div class="key">
+    <span class="key-label">The common thread</span>
+    <p>Every pattern replaces <em>redescription</em> with <em>evidence</em>: examples instead of
+    adjectives, failing tests instead of "still wrong", questions instead of assumed
+    requirements. When an exam stem shows someone re-explaining in different words for the third
+    time, the answer is whichever option introduces evidence.</p>
+  </div>
+
+  <h2>2. CI/CD: running Claude Code unattended</h2>
+
+  <p>The mechanics first — three flags, all verified, all tested on the exam
+  <span class="ts">TS 3.6</span>:</p>
+
+<pre><code># CI review job
+claude -p "Review this diff against the criteria in CLAUDE.md" \
+  --output-format json \
+  --json-schema review-findings.schema.json</code></pre>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Flag</th><th>Without it</th><th>With it</th></tr>
+    <tr><td><code>-p</code> / <code>--print</code></td>
+      <td class="no">Job hangs forever waiting for interactive input</td>
+      <td class="yes">Runs the prompt, prints to stdout, exits</td></tr>
+    <tr><td><code>--output-format json</code></td>
+      <td>Prose a script must fragilely parse</td>
+      <td>Machine-parseable output</td></tr>
+    <tr><td><code>--json-schema</code></td>
+      <td>JSON of whatever shape Claude chose</td>
+      <td>Output conforming to <em>your</em> schema — postable as inline PR comments</td></tr>
+  </table>
+  </div>
+
+  <p>The official sample question is the hang: a pipeline runs
+  <code>claude "Analyze this PR"</code> and freezes. Fix: <code>-p</code>. The distractors —
+  <code>--batch</code>, <code>CLAUDE_HEADLESS=true</code>, redirecting stdin from
+  <code>/dev/null</code> — are invented or wrong.</p>
+
+  <h2>3. Context is what makes CI output good</h2>
+
+  <p>Flags make CI <em>work</em>; context makes it <em>useful</em>. Three named practices, one
+  per failure mode <span class="ts">TS 3.6</span>:</p>
+
+  <ul>
+    <li><b>CLAUDE.md is the CI context channel.</b> The pipeline's Claude knows nothing your
+      prompt and repo don't tell it. Documenting testing standards, fixture conventions and
+      review criteria in CLAUDE.md is how CI-invoked Claude learns what "good" means here —
+      and it directly reduces low-value test generation.</li>
+    <li><b>Feed prior findings back.</b> Re-running review after new commits? Include the previous
+      findings and instruct: report only <em>new or still-unaddressed</em> issues. Otherwise every
+      push re-posts the same comments, and developers learn to ignore the bot.</li>
+    <li><b>Show existing tests.</b> Test generation without the current test files in context
+      produces duplicates of scenarios already covered. Provide them, and ask for what's
+      <em>missing</em>.</li>
+  </ul>
+
+  <h2>4. Don't review your own homework</h2>
+
+  <p>The architectural point in <span class="ts">TS 3.6</span>, and a bridge to Domain 4:
+  <b>the session that generated code is measurably worse at reviewing it</b> than a fresh
+  instance. The generating session retains its own reasoning — the assumptions that produced the
+  bug are still in context, actively defending it. An independent instance sees only the code.</p>
+
+  <div class="pair">
+    <div class="dont">
+      <h4>Same session</h4>
+      <p>"Now review what you just wrote" — the reviewer holds the generator's reasoning and is
+      inclined to confirm it. Self-review instructions and extended thinking don't fix this;
+      the contamination is the context itself.</p>
+    </div>
+    <div class="do">
+      <h4>Independent instance</h4>
+      <p>A separate invocation with no generation context reviews the diff cold. In CI this is
+      natural — the review job is a fresh <code>claude -p</code> call that never saw the code
+      being written.</p>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="note-label">Domain 3 complete — 65% of the exam covered</span>
+    <p>Domains 1, 2 and 3 are done: ≈39 of 60 items. Next is Domain 4 — Prompt Engineering &amp;
+    Structured Output — starting with L11: how <code>tool_use</code> + JSON schemas make output
+    <em>structurally</em> reliable, what schemas can and cannot guarantee, and why nullable
+    fields prevent hallucinated values.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://code.claude.com/docs/en/headless">Run Claude Code headless</a> — the
+    <code>-p</code> / <code>--output-format</code> mechanics in their natural habitat. Then
+    Anthropic's <a href="https://www.anthropic.com/engineering/claude-code-best-practices">Claude
+    Code best practices</a>, which covers test-driven iteration and the refinement patterns from
+    the team that built the tool.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> Practical one worth doing for real: you run CI at
+    Logiciel — sketch the <code>claude -p</code> review job for one of your repos, including what
+    goes in CLAUDE.md for it. Ten minutes, and TS 3.6 becomes something you've built rather than
+    read.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 10</b> · Domain 3 complete · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0009-commands-skills-plan-mode.html">← L09 Commands, Skills &amp; Plan Mode</a>
+      <a href="../reference/01-api-mechanics.html">Ref 01 — API mechanics</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L10-refinement-cicd',
+  title: 'Retrieval check — refinement &amp; CI/CD',
+  passMark: 0.72,
+  questions: [
+    {
+      ts: 'TS 3.5',
+      stem: 'You have described a data transformation in prose three times, and each attempt interprets it differently. Which refinement technique does the blueprint prescribe?',
+      options: [
+        'Provide two or three concrete input/output example pairs demonstrating the expected transformation.',
+        'Rewrite the prose description with more precise terminology and explicitly numbered sub-steps.',
+        'Ask Claude to restate the requirements in its own words before attempting the next implementation.',
+        'Break the transformation into smaller functions and request each one separately in its own turn.'
+      ],
+      answer: 0,
+      why: 'When natural language keeps being interpreted inconsistently, concrete examples are the named fix — an input → expected-output pair carries the specification unambiguously, including edge cases prose forgets to mention.',
+      trap: 'Option B is the instinct the pattern exists to replace: a fourth redescription fails the same way the first three did. The lesson’s thread — replace redescription with evidence.'
+    },
+    {
+      ts: 'TS 3.5',
+      stem: 'You are about to have Claude implement a caching layer in a domain new to you. Which pattern surfaces the design considerations you have not anticipated?',
+      options: [
+        'The interview pattern — have Claude ask you questions before implementing anything.',
+        'Test-driven iteration — write the test suite first and let the failures reveal the gaps.',
+        'Concrete I/O examples — show cache hits and misses so behaviour is fully specified.',
+        'Plan mode — let Claude explore the codebase and propose an approach before changes.'
+      ],
+      answer: 0,
+      why: 'The interview pattern exists for unknown-unknowns: Claude asks about invalidation strategy, failure modes, consistency requirements — considerations the developer had not anticipated in an unfamiliar domain. The blueprint’s example is exactly cache invalidation.',
+      trap: 'Option B assumes you can already write the right tests — but in an unfamiliar domain, the tests would encode the same blind spots. The interview comes first; tests encode what it surfaces.'
+    },
+    {
+      ts: 'TS 3.5',
+      stem: 'Claude’s output has two problems: a pagination bug and an off-by-one error in the same loop, where fixing either affects the other. It also has an unrelated typo in a CSS file. How do you sequence the fixes?',
+      options: [
+        'Describe both loop problems together in one detailed message; fix the CSS typo separately.',
+        'Fix all three in one comprehensive message so that no context is lost between iterations.',
+        'Fix each of the three sequentially in separate messages, verifying each before the next.',
+        'Fix the CSS typo first as the easiest win, then address the two loop problems one by one.'
+      ],
+      answer: 0,
+      why: 'The rule: interacting problems in a single message (so the fix accounts for both), independent problems sequentially. The two loop issues interact; the CSS typo is independent.',
+      trap: 'Options C and D sequence the interacting pair — inviting each fix to break the other. Option B batches the independent typo for no benefit and muddies the loop-fix instructions.'
+    },
+    {
+      scenario: 'Claude Code for Continuous Integration — your pipeline runs claude "Analyze this pull request for security issues" and the job hangs indefinitely, with logs showing Claude Code waiting for input.',
+      ts: 'TS 3.6',
+      stem: 'What is the correct fix?',
+      options: [
+        'Add the -p flag: claude -p "Analyze this pull request for security issues".',
+        'Set the CLAUDE_HEADLESS=true environment variable before running the command.',
+        'Redirect standard input from /dev/null so no interactive prompt can block.',
+        'Add the --batch flag so Claude Code queues the work for offline processing.'
+      ],
+      answer: 0,
+      why: '-p (--print) is the documented non-interactive mode: process the prompt, print to stdout, exit. Exactly what a pipeline needs. This is the official sample question.',
+      trap: 'CLAUDE_HEADLESS and --batch do not exist — invented-feature distractors. The stdin redirect is a Unix workaround that does not address how Claude Code decides to run interactively.'
+    },
+    {
+      ts: 'TS 3.6',
+      stem: 'Your CI review bot re-posts the same comments every time a developer pushes a new commit to the PR, and developers have started ignoring it. What is the fix?',
+      options: [
+        'Include the prior review’s findings in context and instruct Claude to report only new or still-unaddressed issues.',
+        'Post review output only on the first run for each pull request, suppressing every subsequent automated pass.',
+        'Deduplicate comments in the pipeline script by string-matching new findings against previously posted ones.',
+        'Have the bot delete all of its previous comments before each run so only the latest findings remain visible.'
+      ],
+      answer: 0,
+      why: 'The blueprint’s pattern: when re-running reviews after new commits, provide the previous findings and ask for only new or unaddressed issues. The model then does the diffing with full understanding of what "addressed" means.',
+      trap: 'Option C string-matches what is fundamentally a semantic judgement — reworded findings slip through, fixed ones re-post. Option B goes blind to genuinely new issues introduced by later commits.'
+    },
+    {
+      ts: 'TS 3.6',
+      stem: 'Why is an independent Claude instance more effective at reviewing generated code than asking the generating session to review its own output?',
+      options: [
+        'The generating session still holds the reasoning that produced the code, making it unlikely to question its own decisions.',
+        'The generating session has too little context remaining after generation to conduct a thorough review of the changes.',
+        'Review instructions conflict with generation instructions inside one session, so the model blends the two roles.',
+        'An independent instance can be run on a stronger model, and review benefits more from capability than generation.'
+      ],
+      answer: 0,
+      why: 'The contamination is the context itself: the assumptions that produced a bug are still present and actively defend it. An independent instance sees only the code. Self-review instructions and extended thinking do not remove context — separation does.',
+      trap: 'Option D is a real practice but not the reason — the effect holds at equal capability. The exam wants the mechanism: retained reasoning context, not model strength or context exhaustion.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

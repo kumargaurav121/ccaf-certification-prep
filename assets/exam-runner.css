@@ -1,0 +1,105 @@
+/* ============================================================
+   CCAR-F — timed mock exam runner styles (pairs with exam-runner.js)
+   Requires lesson.css first.
+   ============================================================ */
+
+.exam-shell { max-width: 52rem; margin: 0 auto; }
+
+/* ---------- top bar ---------- */
+.exam-top {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  background: var(--paper); border-bottom: 2px solid var(--rule);
+  padding: .7rem .2rem; margin-bottom: 1.4rem;
+}
+.exam-top .ttl { font-family: var(--mono); font-size: .74rem; color: var(--ink-faint); flex: 1; }
+.timer {
+  font-family: var(--mono); font-size: 1.25rem; font-weight: 700;
+  padding: .2rem .7rem; border-radius: 4px;
+  border: 1px solid var(--rule); color: var(--ink);
+}
+.timer.low { color: var(--bad); border-color: var(--bad); background: var(--bad-bg); }
+.progress-line { font-family: var(--mono); font-size: .72rem; color: var(--ink-faint); }
+
+/* ---------- start / rules ---------- */
+.rules { border: 1px solid var(--rule); border-radius: 8px; padding: 1.6rem 1.8rem; background: var(--note-bg); }
+.rules h2 { margin-top: 0; border: none; }
+.rules li { margin-bottom: .5rem; font-size: .95rem; }
+
+/* ---------- scenario banner ---------- */
+.scen-banner {
+  background: var(--accent-bg); border: 1px solid var(--accent);
+  border-radius: 6px; padding: 1rem 1.2rem; margin-bottom: 1.4rem;
+}
+.scen-banner .sn {
+  font-family: var(--mono); font-size: .64rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--accent); display: block; margin-bottom: .35rem;
+}
+.scen-banner p { margin: 0; font-size: .9rem; line-height: 1.55; }
+
+/* ---------- question ---------- */
+.exam-q .q-head {
+  display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap; margin-bottom: .8rem;
+}
+.exam-q .qnum { font-family: var(--mono); font-weight: 700; font-size: .95rem; }
+.exam-q .qmeta { font-family: var(--mono); font-size: .68rem; color: var(--ink-faint); }
+.exam-q .selectn {
+  font-family: var(--mono); font-size: .68rem; color: var(--accent);
+  border: 1px solid currentColor; border-radius: 3px; padding: .08em .45em;
+}
+.flagbtn {
+  margin-left: auto; font-family: var(--mono); font-size: .7rem;
+  background: none; border: 1px solid var(--rule); border-radius: 4px;
+  color: var(--ink-soft); padding: .3rem .7rem; cursor: pointer;
+}
+.flagbtn.on { color: var(--accent); border-color: var(--accent); background: var(--accent-bg); }
+
+.exam-q .stem { font-size: 1.02rem; line-height: 1.6; margin-bottom: 1.1rem; }
+
+/* ---------- nav ---------- */
+.exam-nav { display: flex; gap: .6rem; margin: 1.6rem 0; flex-wrap: wrap; }
+.exam-nav .spacer { flex: 1; }
+
+/* ---------- palette ---------- */
+.palette {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(2.2rem, 1fr));
+  gap: .35rem; margin: 1.2rem 0 2rem;
+  padding: 1rem; border: 1px solid var(--rule-soft); border-radius: 6px; background: var(--note-bg);
+}
+.pal-cell {
+  font-family: var(--mono); font-size: .68rem; text-align: center;
+  padding: .35rem 0; border-radius: 3px; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--paper); color: var(--ink-soft);
+}
+.pal-cell.answered { background: var(--good-bg); border-color: var(--good); color: var(--good); }
+.pal-cell.flagged { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); }
+.pal-cell.current { outline: 2px solid var(--ink); }
+.pal-legend { font-family: var(--mono); font-size: .64rem; color: var(--ink-faint);
+  display: flex; gap: 1rem; flex-wrap: wrap; margin-top: .5rem; }
+
+/* ---------- results ---------- */
+.score-card {
+  text-align: center; border: 1px solid var(--rule); border-radius: 10px;
+  padding: 2rem 1.5rem; margin: 1.5rem 0;
+}
+.score-card .big { font-family: var(--mono); font-size: 3rem; font-weight: 700; display: block; }
+.score-card.pass .big { color: var(--good); }
+.score-card.fail .big { color: var(--bad); }
+.score-card .verdict {
+  font-family: var(--mono); font-size: .8rem; letter-spacing: .2em;
+  text-transform: uppercase; display: block; margin: .4rem 0 .6rem;
+}
+.score-card.pass .verdict { color: var(--good); }
+.score-card.fail .verdict { color: var(--bad); }
+.score-card .sub { font-size: .85rem; color: var(--ink-faint); font-family: var(--mono); }
+
+.dom-row { display: grid; grid-template-columns: 2.4rem 1fr 8rem 5rem; gap: .8rem;
+  align-items: center; padding: .55rem .4rem; border-bottom: 1px solid var(--rule-soft);
+  font-size: .9rem; font-family: var(--sans); }
+.dom-row .bar-wrap { height: 9px; background: var(--rule-soft); border-radius: 4px; overflow: hidden; }
+.dom-row .bar { height: 100%; border-radius: 4px; background: var(--good); }
+.dom-row .bar.weak { background: var(--bad); }
+.dom-row .pct { font-family: var(--mono); font-size: .8rem; text-align: right; }
+
+/* review reuses quiz.css classes for graded options */
+.rev-filters { display: flex; gap: .6rem; margin: 1.4rem 0; }

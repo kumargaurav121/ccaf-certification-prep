@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 15 — Context Windows in Practice</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<link rel="stylesheet" href="../assets/diagram.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 5 · Lesson 15 of 16</p>
+  <h1>Context Windows in Practice</h1>
+  <p class="standfirst">The context window is a physical budget, and three things quietly spend
+  it: verbose tool results, long conversations, and exploration. This lesson is the four defences
+  — trim, extract, position, persist — and when to reach for each.</p>
+
+  <div class="meta">
+    <span><b>Domain 5</b> Context Management &amp; Reliability · 15%</span>
+    <span><b>Covers</b> TS 5.1, TS 5.4</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. Two failure modes, one budget</h2>
+
+  <p>Every TS 5.1/5.4 stem describes one of two degradations:</p>
+
+  <ul>
+    <li><b>Loss by compression.</b> A long support conversation gets progressively summarised, and
+      the summary keeps the gist but flattens the <em>specifics</em> — amounts become "a refund",
+      dates become "recently", the customer's stated expectation disappears. Later turns then act
+      on the vague version. <span class="ts">TS 5.1</span></li>
+    <li><b>Loss by dilution.</b> Nothing is deleted, but so much has accumulated — 40-field order
+      objects, hundreds of grep hits — that the model starts answering from "typical patterns"
+      instead of the specific classes it read an hour ago. The facts are technically <em>in</em>
+      context and functionally invisible. <span class="ts">TS 5.4</span></li>
+  </ul>
+
+  <h2>2. Lost in the middle</h2>
+
+  <p>The best-documented shape of dilution: models reliably process what sits at the
+  <b>beginning</b> and <b>end</b> of a long input, and under-attend to the middle.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 640 190" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A U-shaped attention curve across input position: reliable at the start and end, sagging in the middle where findings get omitted.">
+      <defs>
+        <marker id="ar15" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+        </marker>
+      </defs>
+      <text x="8" y="18" font-size="13" font-weight="600">Recall by position in a long input</text>
+
+      <!-- axes -->
+      <line x1="50" y1="40" x2="50" y2="140" class="wire"/>
+      <line x1="50" y1="140" x2="600" y2="140" class="wire" marker-end="url(#ar15)"/>
+      <text x="20" y="60" font-size="10" class="dim">high</text>
+      <text x="20" y="135" font-size="10" class="dim">low</text>
+      <text x="320" y="158" font-size="10" class="dim" text-anchor="middle">position in input →</text>
+
+      <!-- U curve -->
+      <path class="wire" style="stroke-width:2.5" d="M 60 52 C 180 60, 220 118, 320 118 C 420 118, 470 60, 590 50" fill="none"/>
+
+      <rect x="250" y="98" width="140" height="14" rx="3" class="bad-fill" opacity="0.55"/>
+      <text x="320" y="88" font-size="10.5" class="bad-text" text-anchor="middle" font-weight="600">findings here get omitted</text>
+
+      <text x="70" y="44" font-size="10.5" class="good-text" font-weight="600">start: reliable</text>
+      <text x="586" y="42" font-size="10.5" class="good-text" font-weight="600" text-anchor="end">end: reliable</text>
+    </svg>
+    <p class="cap">the "lost in the middle" effect — position is a reliability variable, so use it deliberately</p>
+  </div>
+
+  <p>The prescribed counter-moves when aggregating many inputs (e.g. subagent findings into a
+  synthesis prompt) <span class="ts">TS 5.1</span>:</p>
+  <ul>
+    <li><b>Put a summary of key findings at the beginning</b> of the aggregated input — the
+      high-reliability slot carries the load-bearing facts.</li>
+    <li><b>Organise the detailed body with explicit section headers</b>, so retrieval has
+      landmarks instead of a undifferentiated middle.</li>
+  </ul>
+
+  <h2>3. Trim at the source, extract what must survive</h2>
+
+  <p>Tool results are the biggest silent spender: one <code>lookup_order</code> returns 40+
+  fields when the case needs five. Multiply by every lookup in a session and the window fills
+  with warehouse codes <span class="ts">TS 5.1</span>.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 660 210" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A verbose 40-field order object is trimmed to the 5 return-relevant fields before entering context; separately, transactional facts are extracted into a persistent case-facts block that rides with every prompt while history gets summarised.">
+      <defs>
+        <marker id="ar15b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+        </marker>
+      </defs>
+
+      <rect x="6" y="30" width="170" height="120" rx="6" class="box"/>
+      <text x="91" y="50" text-anchor="middle" font-size="11.5" font-weight="600">raw tool result</text>
+      <text x="91" y="66" text-anchor="middle" font-size="9.5" class="mono dim">40+ fields</text>
+      <text x="18" y="84" font-size="9" class="mono dim">warehouse_zone, sku_batch,</text>
+      <text x="18" y="97" font-size="9" class="mono dim">carrier_ref, tax_code_v2,</text>
+      <text x="18" y="110" font-size="9" class="mono dim">picker_id, dock_door, ...</text>
+      <text x="18" y="130" font-size="9.5" class="mono">order_id, status, total,</text>
+      <text x="18" y="142" font-size="9.5" class="mono">delivered_at, return_window</text>
+
+      <line x1="176" y1="90" x2="240" y2="90" class="wire" marker-end="url(#ar15b)"/>
+      <text x="208" y="80" font-size="9.5" class="accent-text" text-anchor="middle" font-weight="600">TRIM</text>
+
+      <rect x="242" y="58" width="150" height="64" rx="6" class="good-fill"/>
+      <text x="317" y="78" text-anchor="middle" font-size="11" font-weight="600" class="good-text">5 relevant fields</text>
+      <text x="317" y="94" text-anchor="middle" font-size="9.5">enter context</text>
+      <text x="317" y="110" text-anchor="middle" font-size="9.5" class="mono">~90% tokens saved</text>
+
+      <line x1="392" y1="90" x2="456" y2="90" class="wire" marker-end="url(#ar15b)"/>
+      <text x="424" y="80" font-size="9.5" class="accent-text" text-anchor="middle" font-weight="600">EXTRACT</text>
+
+      <rect x="458" y="30" width="196" height="120" rx="6" class="accent-fill"/>
+      <text x="556" y="50" text-anchor="middle" font-size="11" font-weight="600" class="accent-text">CASE FACTS block</text>
+      <text x="470" y="70" font-size="9.5" class="mono">order: ORD-12345</text>
+      <text x="470" y="84" font-size="9.5" class="mono">amount: $89.99</text>
+      <text x="470" y="98" font-size="9.5" class="mono">delivered: 2026-08-30</text>
+      <text x="470" y="112" font-size="9.5" class="mono">customer expects: refund</text>
+      <text x="470" y="132" font-size="9" class="dim">included in EVERY prompt,</text>
+      <text x="470" y="144" font-size="9" class="dim">outside the summarised history</text>
+    </svg>
+    <p class="cap">trim what enters · extract what must never be summarised away</p>
+  </div>
+
+  <p>The two named mechanisms, and how they differ:</p>
+  <ul>
+    <li><b>Trimming</b> keeps irrelevant tokens <em>out</em>: cut verbose tool output to the
+      relevant fields <em>before</em> it accumulates.</li>
+    <li><b>The case-facts block</b> keeps critical tokens <em>alive</em>: transactional facts —
+      amounts, dates, order numbers, statuses, the customer's stated expectation — are extracted
+      into a persistent structured block included with each prompt, <b>outside</b> whatever
+      summarisation the rest of the history undergoes. Compression can now flatten the
+      conversation without flattening the numbers. Multi-issue sessions get the same treatment
+      per issue.</li>
+  </ul>
+
+  <p>The multi-agent variant <span class="ts">TS 5.1</span>: when a downstream agent has a
+  limited context budget, <b>modify the upstream agent to return structured data</b> — key
+  facts, citations, relevance scores — instead of verbose prose and reasoning chains. Same
+  trim-at-source instinct, applied at an agent boundary; it's also what makes L14's provenance
+  mappings affordable.</p>
+
+  <h2>4. Long exploration: persist outside the window</h2>
+
+  <p><span class="ts">TS 5.4</span> is the codebase-exploration version. Symptoms of an exhausted
+  exploration session: inconsistent answers, and references to "typical patterns" where an hour
+  ago it cited the actual class names. The defences escalate:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Defence</th><th>Mechanism</th><th>Reach for it</th></tr>
+    <tr><td><b>Subagent delegation</b></td>
+      <td>Verbose investigation runs in an isolated context (L02/L09's Explore); main agent keeps
+        coordination-level understanding only</td>
+      <td>Before exploration starts — the preventive move</td></tr>
+    <tr><td><b>Scratchpad files</b></td>
+      <td>The agent writes key findings to a file as it works, and re-reads them for later
+        questions — memory on disk instead of in-window</td>
+      <td>Long sessions where findings must outlive context churn</td></tr>
+    <tr><td><b>Summarise-then-spawn</b></td>
+      <td>Close each phase by summarising its findings; inject the summary into the next phase's
+        subagents as initial context</td>
+      <td>Multi-phase work — each phase starts clean but informed</td></tr>
+    <tr><td><b><code>/compact</code></b></td>
+      <td>Claude Code compresses the conversation in place</td>
+      <td>Mid-session, when discovery output has filled the window</td></tr>
+    <tr><td><b>Crash-recovery manifests</b></td>
+      <td>Each agent exports structured state to a known location; on resume, the coordinator
+        loads the manifest and injects it into agent prompts</td>
+      <td>Long multi-agent runs that must survive interruption</td></tr>
+  </table>
+  </div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 660 168" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="During a run, each agent exports structured state to a manifest at a known location. After a crash, the coordinator loads the manifest and injects state into fresh agent prompts, resuming without re-exploration.">
+      <defs>
+        <marker id="ar15c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" class="arrowhead"/>
+        </marker>
+      </defs>
+      <text x="8" y="18" font-size="13" font-weight="600">Crash recovery via manifests</text>
+
+      <rect x="8" y="40" width="120" height="40" rx="6" class="box"/>
+      <text x="68" y="58" text-anchor="middle" font-size="11">agents export</text>
+      <text x="68" y="72" text-anchor="middle" font-size="11">state as they work</text>
+
+      <line x1="128" y1="60" x2="196" y2="60" class="wire" marker-end="url(#ar15c)"/>
+
+      <rect x="198" y="34" width="150" height="52" rx="6" class="accent-fill"/>
+      <text x="273" y="56" text-anchor="middle" font-size="11.5" font-weight="600" class="accent-text">manifest.json</text>
+      <text x="273" y="72" text-anchor="middle" font-size="9.5">known location, structured</text>
+
+      <text x="380" y="46" font-size="18" class="bad-text">⚡</text>
+      <text x="418" y="46" font-size="10.5" class="bad-text" font-weight="600">crash / interruption</text>
+
+      <line x1="348" y1="72" x2="446" y2="106" class="wire dash" marker-end="url(#ar15c)"/>
+      <text x="380" y="102" font-size="9.5" class="dim">on resume</text>
+
+      <rect x="448" y="96" width="200" height="52" rx="6" class="good-fill"/>
+      <text x="548" y="116" text-anchor="middle" font-size="11" font-weight="600" class="good-text">coordinator loads manifest</text>
+      <text x="548" y="132" text-anchor="middle" font-size="9.5">injects state into fresh agent prompts</text>
+    </svg>
+    <p class="cap">no re-exploration after a crash — the state lived outside every context window</p>
+  </div>
+
+  <p>Notice the family resemblance to L04: a resumed <em>session</em> restores stale conversation;
+  a loaded <em>manifest</em> restores curated, structured state. The exam prefers state you
+  designed over history you replayed.</p>
+
+  <div class="key">
+    <span class="key-label">One sentence for the whole lesson</span>
+    <p><b>Decide what must survive, and give it a home the budget can't touch</b> — a facts block
+    outside the summary, a scratchpad outside the window, a manifest outside the process. What
+    merely passed through gets trimmed on the way in and positioned deliberately when it matters.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://code.claude.com/docs/en/context-window">The context window</a> (Claude
+    Code docs) for what actually survives compaction, and Anthropic's
+    <a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Effective
+    context engineering for AI agents</a> — the canonical treatment of trimming, structure and
+    position.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> Good self-test: your support agent handles a
+    45-minute, three-issue conversation — say exactly which facts go in the case-facts block,
+    what gets trimmed from each order lookup, and what a mid-session <code>/compact</code> would
+    and wouldn't endanger.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 15</b> · Domain 5 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0014-calibration-and-review-routing.html">← L14 Calibration</a>
+      <a href="../reference/00-exam-blueprint.html">Ref 00 — Blueprint</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L15-context-windows',
+  title: 'Retrieval check — context windows in practice',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Customer Support Resolution Agent — a long, multi-issue conversation where history is progressively summarised to stay within budget.',
+      ts: 'TS 5.1',
+      stem: 'After summarisation, the agent quotes the wrong refund amount and misses the customer’s stated deadline. What is the prescribed fix?',
+      options: [
+        'Extract transactional facts into a persistent case-facts block included with each prompt, outside the summarised history.',
+        'Replace progressive summarisation with truncation of the oldest turns, since summaries are what corrupted the specifics.',
+        'Raise the summarisation threshold so compression starts later in the conversation, preserving more of the exact wording.',
+        'Instruct the summariser to write longer, more faithful summaries that always retain every number they encounter.'
+      ],
+      answer: 0,
+      why: 'Compression flattens specifics — amounts, dates, expectations — so the facts that must survive get a home outside the compression: a structured block that rides with every prompt. History can then be summarised freely without losing the numbers.',
+      trap: 'Options C and D delay or soften the failure without removing it — any compression eventually loses specifics. The move is architectural: separate what must survive from what may be compressed.'
+    },
+    {
+      ts: 'TS 5.1',
+      stem: 'A synthesis agent receives twelve subagent reports concatenated into one long prompt and reliably uses the first and last reports while ignoring findings from the middle ones. What are the prescribed mitigations? (Select 2.)',
+      options: [
+        'Place a summary of the key findings at the beginning of the aggregated input.',
+        'Organise the detailed reports under explicit section headers as retrieval landmarks.',
+        'Duplicate every report so each one appears both early and late in the prompt.',
+        'Sort the reports by length, shortest first, so attention is spent more evenly.'
+      ],
+      answer: [0, 1],
+      why: 'This is lost-in-the-middle. Position is a reliability variable: load-bearing facts go in the high-reliability opening slot, and explicit headers give the middle structure the model can navigate to.',
+      trap: 'Option C doubles the token spend and deepens the dilution it tries to fix. Length ordering (D) changes nothing about the positional attention curve.'
+    },
+    {
+      ts: 'TS 5.1',
+      stem: 'Each lookup_order call returns 40+ fields; a support session makes many lookups, and only a handful of fields ever matter to returns. What does the blueprint prescribe?',
+      options: [
+        'Trim tool outputs to the return-relevant fields before they accumulate in the conversation context.',
+        'Cache the full order objects outside the conversation and have the agent query the cache on demand.',
+        'Batch the lookups into one call at session start so the field overhead is only paid a single time.',
+        'Switch to a model with a larger context window so the accumulated fields stay within budget.'
+      ],
+      answer: 0,
+      why: 'Trim at the source: cut each result to relevant fields before it enters context. Tool results consume tokens disproportionately to their relevance — the fix is not more room, it is less junk.',
+      trap: 'Option D is the capacity fallacy again — dilution degrades attention even when everything fits. Option B adds real machinery where a filter on the way in suffices.'
+    },
+    {
+      scenario: 'Developer Productivity — a three-hour codebase exploration session has begun giving inconsistent answers, describing "typical repository patterns" instead of the specific classes it read earlier.',
+      ts: 'TS 5.4',
+      stem: 'Which combination does the blueprint prescribe for continuing this work reliably?',
+      options: [
+        'Maintain a scratchpad file of key findings to re-read later, and delegate verbose investigations to subagents.',
+        'Restart the session from zero and re-explore the codebase, this time reading files in dependency order.',
+        'Run /compact repeatedly on a schedule so the conversation never approaches the context limit at all.',
+        'Paste the full exploration transcript into a fresh session so no discovered detail is lost in the move.'
+      ],
+      answer: 0,
+      why: 'The named pair for context degradation in extended exploration: persist findings to scratchpad files (memory on disk, immune to context churn) and isolate verbose discovery in subagents so the main context holds coordination-level understanding.',
+      trap: 'Option D moves the entire problem into a new window — the transcript IS the dilution. Curated persistence beats wholesale transfer; that is the lesson’s one sentence.'
+    },
+    {
+      ts: 'TS 5.4',
+      stem: 'A multi-agent overnight analysis must survive crashes without redoing hours of work. Which design does the blueprint name?',
+      options: [
+        'Each agent exports structured state to a known location; on resume the coordinator loads the manifest and injects it into agent prompts.',
+        'The coordinator checkpoints its full conversation history to disk each turn, restoring the transcript byte-for-byte after any crash.',
+        'Each agent periodically prints progress to the log so that a human can reconstruct and reassign the remaining work after a failure.',
+        'The system resumes each agent’s session by ID after the crash, relying on session persistence to restore each agent’s prior context.'
+      ],
+      answer: 0,
+      why: 'Structured state persistence: agents export manifests as they work; recovery is the coordinator loading curated state into fresh prompts. Designed state, not replayed history.',
+      trap: 'Options B and D restore transcripts — bulky, stale-prone, and (per L04) sessions persist conversation, not the world. The blueprint’s pattern is explicitly the manifest, not the replay.'
+    },
+    {
+      ts: 'TS 5.1',
+      stem: 'A downstream synthesis agent keeps running out of context receiving upstream agents’ full prose reports and reasoning chains. What is the blueprint’s change?',
+      options: [
+        'Modify the upstream agents to return structured data — key facts, citations, relevance scores — instead of verbose narrative output.',
+        'Give the synthesis agent a larger share of the context budget by shortening its own system prompt and instructions to a minimum.',
+        'Have the coordinator split synthesis across several sequential passes, each one consuming a fraction of the upstream reports.',
+        'Compress the upstream reports with an intermediate summarisation agent before they are forwarded on to the synthesis stage.'
+      ],
+      answer: 0,
+      why: 'Fix the producer, not the consumer: upstream agents return structured findings, which cost a fraction of prose-plus-reasoning and preserve exactly the fields synthesis needs (including provenance). Trim-at-source, applied at an agent boundary.',
+      trap: 'Option D inserts a lossy compression hop — the summariser flattens specifics and strips attribution, the very failures TS 5.1 and 5.6 warn about. Structure beats compression because it chooses what survives.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

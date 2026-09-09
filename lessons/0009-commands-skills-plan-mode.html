@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 09 — Commands, Skills &amp; Plan Mode</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 3 · Lesson 09 of 16</p>
+  <h1>Commands, Skills &amp; Plan Mode</h1>
+  <p class="standfirst">Three ways to package how your team works: commands for invocable prompts,
+  skills for workflows with configuration, and plan mode for the decisions expensive enough to
+  design before touching code. The exam tests where each lives and when each earns its cost.</p>
+
+  <div class="meta">
+    <span><b>Domain 3</b> Claude Code Configuration &amp; Workflows · 20%</span>
+    <span><b>Covers</b> TS 3.2, TS 3.4</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. Slash commands: the scope rule again</h2>
+
+  <p>A custom slash command is a prompt stored as a markdown file, invoked by name. The only
+  structural question is the one you already know from L07 and L08 — <b>who is it for?</b>
+  <span class="ts">TS 3.2</span></p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Scope</th><th>Location</th><th>Reaches teammates?</th></tr>
+    <tr><td><b>Project</b></td><td><code>.claude/commands/review.md</code> → <code>/review</code></td>
+      <td class="yes">Yes — version-controlled, arrives on clone/pull</td></tr>
+    <tr><td><b>User</b></td><td><code>~/.claude/commands/review.md</code></td>
+      <td class="no">No — personal, all your projects</td></tr>
+  </table>
+  </div>
+
+  <p>The official sample question is exactly this: "a <code>/review</code> command every developer
+  should get when they clone the repo" → <code>.claude/commands/</code> in the repository. The
+  distractors were <code>~/.claude/commands/</code> (personal), CLAUDE.md (instructions, not
+  commands), and a <code>.claude/config.json</code> commands array (<b>does not exist</b>).</p>
+
+  <h2>2. Skills: workflows with configuration</h2>
+
+  <p>A skill is a directory — <code>.claude/skills/&lt;name&gt;/SKILL.md</code> plus optional
+  supporting files — whose YAML frontmatter configures how it runs
+  <span class="ts">TS 3.2</span>:</p>
+
+<pre><code>---
+name: analyze-codebase
+description: Map the architecture of a package and report conventions.
+context: fork              # run in an isolated subagent context
+allowed-tools: Read Grep Glob   # tool access during the skill
+argument-hint: "[package-path]" # autocomplete hint for arguments
+---
+
+1. Map the directory structure of $ARGUMENTS
+2. Identify entry points, conventions, and dependencies
+3. Return a structured summary</code></pre>
+
+  <p>The three frontmatter fields the blueprint names, and what each is <em>for</em>:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Field</th><th>Does</th><th>Reach for it when</th></tr>
+    <tr><td><code>context: fork</code></td>
+      <td>Runs the skill in an <b>isolated subagent context</b>; only the result returns</td>
+      <td>The skill produces verbose output (codebase analysis) or exploratory context
+        (brainstorming) that would pollute the main conversation</td></tr>
+    <tr><td><code>allowed-tools</code></td>
+      <td>Scopes tool access while the skill runs</td>
+      <td>Limiting a skill to file reads so it cannot take destructive actions</td></tr>
+    <tr><td><code>argument-hint</code></td>
+      <td>Shows expected parameters at invocation</td>
+      <td>Developers keep invoking the skill without the arguments it needs</td></tr>
+  </table>
+  </div>
+
+  <p>Recognise <code>context: fork</code>? It is <b>L02's context isolation, packaged</b>: the
+  forty files a codebase-analysis skill reads stay in the fork; the main session receives only
+  the summary. Same architecture, one line of YAML.</p>
+
+  <p>One more TS 3.2 fact: to personalise a team skill without affecting anyone else, create a
+  variant in <code>~/.claude/skills/</code> <b>under a different name</b> — same-named personal
+  skills would shadow confusingly; a distinct name keeps both invocable.</p>
+
+  <h2>3. Skills vs CLAUDE.md: the boundary</h2>
+
+  <div class="pair">
+    <div class="do">
+      <h4>CLAUDE.md / rules</h4>
+      <p><b>Always-loaded universal standards.</b> Facts and conventions that should shape every
+      session without anyone asking: naming, build commands, architecture. If it must apply
+      automatically, it lives here (or in a path-scoped rule).</p>
+    </div>
+    <div class="do">
+      <h4>Skills</h4>
+      <p><b>On-demand, task-specific workflows.</b> Multi-step procedures invoked when needed:
+      deploy checklist, release notes, codebase analysis. Loads only when used — long reference
+      material costs nothing until invoked.</p>
+    </div>
+  </div>
+
+  <p>The tell in exam stems: "should apply <em>automatically</em> whenever…" → CLAUDE.md or a
+  path-scoped rule. "The team runs this <em>when they need to</em>…" → a skill or command. A
+  procedure pasted into CLAUDE.md burns context in every session that never uses it.</p>
+
+  <div class="note">
+    <span class="note-label">Product note (know both, answer the exam's version)</span>
+    <p>In current Claude Code, <b>commands have merged into skills</b> — <code>.claude/commands/deploy.md</code>
+    and <code>.claude/skills/deploy/SKILL.md</code> both create <code>/deploy</code>, and old
+    command files keep working. The exam treats commands and skills as distinct mechanisms with
+    the locations above — answer in those terms.</p>
+  </div>
+
+  <h2>4. Plan mode vs direct execution</h2>
+
+  <p><span class="ts">TS 3.4</span> is a cost-of-error judgement. Plan mode explores and designs
+  <em>without making changes</em>; direct execution just goes. The decision:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Signal in the task</th><th>Mode</th><th>Why</th></tr>
+    <tr><td>Architectural decisions — service boundaries, module dependencies</td>
+      <td class="yes">Plan</td><td>Wrong structure discovered late = costly rework</td></tr>
+    <tr><td>Large-scale change — a migration touching 45+ files</td>
+      <td class="yes">Plan</td><td>Scope must be understood before the first edit</td></tr>
+    <tr><td>Multiple valid approaches with different tradeoffs</td>
+      <td class="yes">Plan</td><td>The <em>choice</em> is the work; design it explicitly</td></tr>
+    <tr><td>Single-file bug fix with a clear stack trace</td>
+      <td class="no">Direct</td><td>Scope is already known; planning is overhead</td></tr>
+    <tr><td>Adding one validation check to one function</td>
+      <td class="no">Direct</td><td>Well-scoped, low blast radius</td></tr>
+  </table>
+  </div>
+
+  <p>Two refinements the exam rewards:</p>
+
+  <ul>
+    <li><b>Plan then execute is one workflow, not two choices.</b> The canonical pattern for a
+      library migration: plan mode to explore and design the approach, then direct execution to
+      implement the planned change. The official sample's wrong answer worth remembering:
+      <em>"start direct and switch to plan mode if it gets complex"</em> — wrong because the
+      complexity is already stated in the task; you don't wait to discover what you were told.</li>
+    <li><b>The Explore subagent</b> handles verbose discovery: during multi-phase work, delegating
+      "find every usage of X" to Explore keeps hundreds of grep hits out of the main context,
+      returning summaries instead. L02's isolation, again — this time built in.</li>
+  </ul>
+
+  <div class="note">
+    <span class="note-label">Where this goes next</span>
+    <p>L10 finishes Domain 3 with iterative refinement (input/output examples, test-driven
+    iteration, the interview pattern) and CI/CD — <code>-p</code>,
+    <code>--output-format json</code>, <code>--json-schema</code>, and why the session that wrote
+    the code shouldn't review it.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://code.claude.com/docs/en/skills">Extend Claude with skills</a> — the
+    frontmatter reference table (you now know the three fields the exam names; skim what else
+    exists), and
+    <a href="https://code.claude.com/docs/en/common-workflows#use-plan-mode-for-safe-code-analysis">plan
+    mode</a> in the workflows guide.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> A good self-test:
+    <em>"we have a release-notes procedure, a naming convention, and a deploy checklist — which
+    becomes CLAUDE.md content, which a rule, which a skill, and why?"</em> If the answers feel
+    obvious, TS 3.2 is banked and you should sprint the quiz.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 09</b> · Domain 3 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0008-configuration-hierarchy.html">← L08 Configuration Hierarchy</a>
+      <a href="../reference/00-exam-blueprint.html">Ref 00 — Blueprint</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L09-commands-skills-plan',
+  title: 'Retrieval check — commands, skills &amp; plan mode',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Code Generation with Claude Code — a team wants a custom /review command running their standard code review checklist, available to every developer on clone or pull.',
+      ts: 'TS 3.2',
+      stem: 'Where should this command file be created?',
+      options: [
+        'In the .claude/commands/ directory inside the project repository.',
+        'In ~/.claude/commands/ within each developer’s home directory.',
+        'In the CLAUDE.md file at the project root, as a named section.',
+        'In a .claude/config.json file, listed under a commands array.'
+      ],
+      answer: 0,
+      why: 'Project-scoped commands live in .claude/commands/ inside the repo — version-controlled, so every developer gets them on clone or pull. This is the official sample question verbatim.',
+      trap: 'Option D describes a configuration mechanism that does not exist — one of the exam’s invented-feature distractors. Option B works for one person but never reaches the team.'
+    },
+    {
+      ts: 'TS 3.2',
+      stem: 'A codebase-analysis skill floods the main conversation with exploration output, crowding out the work that invoked it. Which frontmatter change fixes this?',
+      options: [
+        'context: fork — the skill runs in an isolated subagent context and only its result returns.',
+        'allowed-tools: Read — restricting the skill to reads reduces how much output it generates.',
+        'disable-model-invocation: true — the skill then only runs when a developer invokes it.',
+        'argument-hint: "[package]" — scoping the analysis to one package bounds its output size.'
+      ],
+      answer: 0,
+      why: 'context: fork is packaged context isolation: the verbose exploration stays in the fork, and the main session receives only the summary — the same architecture as L02’s subagents, in one line of YAML.',
+      trap: 'Option B confuses tool restriction with output routing — a read-only skill still returns every line into the main context. Options C and D change when and how the skill runs, not where its output lands.'
+    },
+    {
+      ts: 'TS 3.2',
+      stem: 'What does allowed-tools in skill frontmatter accomplish?',
+      options: [
+        'It scopes which tools may run during the skill — e.g. limiting to file reads so the skill cannot act destructively.',
+        'It preloads the listed tools’ schemas into context so the skill selects between them more reliably at runtime.',
+        'It grants the listed tools permanently to the session, persisting after the skill completes its final step.',
+        'It hides all other tools from the model for the rest of the session so unrelated work cannot interfere.'
+      ],
+      answer: 0,
+      why: 'allowed-tools restricts tool access during skill execution — the blueprint’s example is limiting a skill to file operations to prevent destructive actions. The grant is scoped to the skill’s turn, not the session.',
+      trap: 'Options C and D both extend the effect beyond the skill — the restriction and the grant clear afterwards. Scoped means scoped.'
+    },
+    {
+      ts: 'TS 3.2',
+      stem: 'Your team’s deploy checklist is pasted into CLAUDE.md, where it consumes context in every session although deploys happen weekly. Universal naming conventions live there too. What is the right split?',
+      options: [
+        'Keep the naming conventions in CLAUDE.md; move the deploy checklist into a skill invoked when deploying.',
+        'Keep both in CLAUDE.md, since splitting configuration across mechanisms makes it harder to audit.',
+        'Move both into skills, so that no configuration consumes context until someone actually needs it.',
+        'Move both into .claude/rules/ files with paths frontmatter so each loads only when it is relevant.'
+      ],
+      answer: 0,
+      why: 'The boundary: always-applicable standards belong in always-loaded CLAUDE.md; task-specific multi-step procedures belong in on-demand skills. Naming conventions must shape every session; a deploy checklist matters only when deploying.',
+      trap: 'Option C over-corrects — naming conventions in a skill stop applying automatically, so most sessions would ignore them. Option D misfits both: neither item is scoped to particular file paths.'
+    },
+    {
+      scenario: 'You are assigned to restructure a monolithic application into microservices — changes across dozens of files, with decisions about service boundaries and module dependencies.',
+      ts: 'TS 3.4',
+      stem: 'Which approach should you take?',
+      options: [
+        'Enter plan mode to explore the codebase and design the approach before making any changes.',
+        'Start in direct execution and switch to plan mode only if unexpected complexity emerges.',
+        'Use direct execution with comprehensive upfront instructions specifying each service’s structure.',
+        'Start with direct execution on the smallest service to learn the pattern, then plan the rest.'
+      ],
+      answer: 0,
+      why: 'Architectural decisions plus multi-file scale are exactly plan mode’s case: explore and design before committing, because wrong boundaries discovered late mean expensive rework. This is the official sample question.',
+      trap: 'Option B fails because the complexity is already stated in the task — waiting to "discover" it ignores the brief. Option C assumes you already know the right structure without having explored the code.'
+    },
+    {
+      ts: 'TS 3.4',
+      stem: 'During a multi-phase task, the discovery phase ("find every place the legacy client is used") produces hundreds of matches that would exhaust the main conversation’s context. What does the blueprint recommend?',
+      options: [
+        'Delegate discovery to the Explore subagent, which isolates the verbose output and returns a summary.',
+        'Run /compact after the discovery phase completes, recovering the context the matches consumed.',
+        'Split discovery across several sessions, each searching one part of the tree, then merge by hand.',
+        'Write the matches to a file with Bash and grep, keeping the results out of the conversation entirely.'
+      ],
+      answer: 0,
+      why: 'The Explore subagent exists for verbose discovery: the hundreds of hits stay in its isolated context, and the main conversation receives a summary — preserving context for the phases that follow.',
+      trap: 'Option B recovers context only after the damage — compaction summarises what already flooded in, and detail is lost in the process. Option D keeps results out of context but also away from the model’s reasoning; a summary that never existed can’t guide phase two.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

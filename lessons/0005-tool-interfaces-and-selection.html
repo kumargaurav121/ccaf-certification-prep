@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 05 — Tool Interfaces &amp; Selection</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 2 · Lesson 05 of 16</p>
+  <h1>Tool Interfaces &amp; Selection</h1>
+  <p class="standfirst">Claude never sees your tool's code. It sees a name, a description and a
+  schema, and it chooses from those alone. That makes the description the most load-bearing
+  string in your system — and most selection bugs are description bugs wearing a disguise.</p>
+
+  <div class="meta">
+    <span><b>Domain 2</b> Tool Design &amp; MCP Integration · 18%</span>
+    <span><b>Covers</b> TS 2.1, TS 2.3</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. How selection actually works</h2>
+
+  <p>When a request arrives, Claude reads every tool's <code>name</code>,
+  <code>description</code> and <code>input_schema</code>, and matches the request against that
+  text. There is no other channel. No routing table, no training on <em>your</em> tools, no
+  memory of which tool worked last time. <b>Descriptions are the primary mechanism LLMs use for
+  tool selection</b> <span class="ts">TS 2.1</span> — which means:</p>
+
+  <ul>
+    <li>Minimal descriptions ("Retrieves customer information") give the model nothing to
+      discriminate with when two tools look similar.</li>
+    <li>Overlapping descriptions cause misrouting even when each is individually fine.</li>
+    <li>Fixing descriptions is free, immediate, and the correct <em>first</em> move — before
+      few-shot examples, before routing layers, before consolidation.</li>
+  </ul>
+
+  <h2>2. Anatomy of a description that selects reliably</h2>
+
+  <p>The blueprint names four ingredients. Written out for the exam's own support-agent tools:</p>
+
+<pre><code>"name": "lookup_order",
+"description":
+  "Retrieve one order's status, line items, totals and shipping dates.
+
+   Input: an order ID in the format ORD-XXXXX (e.g. ORD-12345).
+   Example queries this serves: 'where is my order', 'was ORD-2231
+   delivered', 'what did I pay for order X'.
+
+   Edge cases: returns the most recent state only; historical
+   snapshots are not available. Split shipments appear as one order
+   with multiple shipping dates.
+
+   Use lookup_order when you already have an order ID.
+   Use get_customer first when you only have a name or email —
+   this tool cannot search by customer."</code></pre>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Ingredient</th><th>Answers the model's question</th></tr>
+    <tr><td><b>Input formats</b></td><td>"Can I call it with what I have in hand?"</td></tr>
+    <tr><td><b>Example queries</b></td><td>"Does this request look like that tool's requests?"</td></tr>
+    <tr><td><b>Edge cases</b></td><td>"What will I get back in the awkward cases?"</td></tr>
+    <tr><td><b>Boundaries vs similar tools</b></td><td>"Why this one and not its neighbour?"</td></tr>
+  </table>
+  </div>
+
+  <p>Anthropic's engineering guidance adds the framing worth remembering: write the description
+  <b>as you would explain the tool to a new team member</b>, making implicit context explicit —
+  and prefer unambiguous parameter names (<code>user_id</code>, never <code>user</code>).</p>
+
+  <h2>3. The overlap failure, and its three fixes</h2>
+
+  <p>The blueprint's worked example: <code>analyze_content</code> and
+  <code>analyze_document</code>, near-identical descriptions. The agent routes web results to the
+  document tool and PDFs to the content tool, apparently at random — because from where the model
+  sits, the two <em>are</em> random. Three escalating fixes <span class="ts">TS 2.1</span>:</p>
+
+  <ol>
+    <li><b>Rewrite the descriptions</b> to state each tool's boundary explicitly. Cheapest,
+      first.</li>
+    <li><b>Rename to eliminate conceptual overlap</b> — <code>analyze_content</code> becomes
+      <code>extract_web_results</code> with a web-specific description. The name itself now
+      carries selection signal.</li>
+    <li><b>Split a generic tool into purpose-specific tools</b> — <code>analyze_document</code>
+      becomes <code>extract_data_points</code>, <code>summarize_content</code>,
+      <code>verify_claim_against_source</code>, each with a defined input/output contract.</li>
+  </ol>
+
+  <div class="warn">
+    <span class="warn-label">The fourth suspect: your system prompt</span>
+    <p>Selection is also steered by the system prompt, and <b>keyword-sensitive instructions can
+    override well-written descriptions</b>. An instruction like "always analyze documents
+    thoroughly" builds an unintended association: requests containing the word "document" start
+    flowing to whatever tool has "document" in its name. When selection misbehaves and the
+    descriptions look right, audit the system prompt for keywords that echo tool names.</p>
+  </div>
+
+  <h2>4. How many tools? Fewer than you think</h2>
+
+  <p><span class="ts">TS 2.3</span> is blunt: an agent with <b>18 tools</b> selects less reliably
+  than an agent with <b>4–5</b>, purely because every additional tool enlarges the discrimination
+  problem. Two corollaries:</p>
+
+  <ul>
+    <li><b>Scope tools to role.</b> A synthesis agent with web-search tools will eventually use
+      them — badly. Agents misuse tools outside their specialisation not out of malice but
+      because the tools are <em>there</em>, occupying selection probability.</li>
+    <li><b>Consolidate when it reduces agent burden.</b> Anthropic's example: one
+      <code>schedule_event</code> that finds availability internally beats
+      <code>list_users</code> + <code>list_events</code> + <code>create_event</code> — the agent
+      makes one decision instead of orchestrating three. Consolidation and splitting are both
+      valid; the test is always <em>which gives the model fewer, clearer decisions</em>.</li>
+  </ul>
+
+  <p>Two named patterns from the blueprint complete the picture:</p>
+
+  <div class="pair">
+    <div class="do">
+      <h4>Constrained alternative</h4>
+      <p>Replace a generic <code>fetch_url</code> with <code>load_document</code> that validates
+      document URLs. The narrower contract prevents whole categories of misuse without any
+      prompt text.</p>
+    </div>
+    <div class="do">
+      <h4>Scoped cross-role tool</h4>
+      <p>The synthesis agent gets a narrow <code>verify_fact</code> for the 85% of simple checks;
+      complex investigation still routes through the coordinator. Least privilege, sized to the
+      common case.</p>
+    </div>
+  </div>
+
+  <h2>5. <code>tool_choice</code>: dialling model discretion</h2>
+
+  <p>Everything so far improves the model's <em>judgement</em>. <code>tool_choice</code> removes
+  judgement where you don't want any <span class="ts">TS 2.3</span>:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Setting</th><th>Guarantees</th><th>Canonical use</th></tr>
+    <tr><td><code>{"type": "auto"}</code></td><td>Nothing — model may answer in text</td>
+      <td>Conversation where a tool may not be needed</td></tr>
+    <tr><td><code>{"type": "any"}</code></td><td>Some tool <em>will</em> be called</td>
+      <td>Structured output when the right schema depends on the document</td></tr>
+    <tr><td><code>{"type": "tool", "name": "extract_metadata"}</code></td><td>That exact tool is called</td>
+      <td>Forcing a first step before enrichment runs in later turns</td></tr>
+  </table>
+  </div>
+
+  <p>The distinction the exam leans on: <code>auto</code> means a request can come back as
+  conversational text with no tool call at all. If your pipeline parses tool output, that is a
+  crash. <code>any</code> closes that hole while leaving the choice of tool open; forced selection
+  closes both.</p>
+
+  <div class="note">
+    <span class="note-label">Where this goes next</span>
+    <p>A well-selected tool can still <em>fail</em> — and what it returns when it fails decides
+    whether the agent recovers intelligently or thrashes. Lesson 06 is structured errors:
+    <code>isError</code>, the four error categories, and why "Operation failed" is the worst
+    string in agent engineering.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://www.anthropic.com/engineering/writing-tools-for-agents">Writing effective
+    tools for agents</a> (Anthropic Engineering). This article underpins TS 2.1 and 2.3 almost
+    line by line — the new-team-member framing, tool-count guidance, namespacing
+    (<code>asana_search</code> / <code>jira_search</code>), and returning high-signal responses
+    instead of UUID soup. ~15 minutes.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> Worth pushing on: <em>"when do I consolidate
+    versus split?"</em> — the two rules sound contradictory until you see they optimise the same
+    quantity (decisions the model must get right). Or bring me two of your own tools with fuzzy
+    boundaries and we'll rewrite their descriptions together.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 05</b> · Domain 2 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0004-decomposition-and-sessions.html">← L04 Decomposition &amp; Sessions</a>
+      <a href="../reference/01-api-mechanics.html">Ref 01 — API mechanics</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L05-tool-interfaces',
+  title: 'Retrieval check — tool interfaces &amp; selection',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Customer Support Resolution Agent — MCP tools get_customer ("Retrieves customer information") and lookup_order ("Retrieves order details"), both accepting similar identifier formats.',
+      ts: 'TS 2.1',
+      stem: 'Logs show the agent frequently calls get_customer when users ask about orders ("check my order #12345") instead of lookup_order. What is the most effective first step?',
+      options: [
+        'Expand each description to include input formats, example queries, edge cases, and when to use it versus the similar tool.',
+        'Add five to eight few-shot examples to the system prompt demonstrating order-related queries routing to lookup_order.',
+        'Add a routing layer that parses each user message and pre-selects the appropriate tool from detected identifier patterns.',
+        'Merge both tools into a single lookup_entity tool that accepts any identifier and resolves the correct backend internally.'
+      ],
+      answer: 0,
+      why: 'Descriptions are the primary selection mechanism, and these are one line each — the model has nothing to discriminate with. Rewriting them acts directly on the root cause and costs nothing. This is the official sample question for TS 2.1.',
+      trap: 'Option D is legitimate architecture but heavier than a "first step" warrants. Option C bypasses the model’s language understanding with brittle keyword parsing; option B adds token overhead without fixing the underlying ambiguity.'
+    },
+    {
+      ts: 'TS 2.1',
+      stem: 'Two tools, analyze_content and analyze_document, have near-identical descriptions and the agent routes between them unpredictably. Rewriting the descriptions helps only partially. What is the next escalation?',
+      options: [
+        'Rename the tools to encode their distinct purposes — e.g. analyze_content becomes extract_web_results with a web-specific description.',
+        'Set tool_choice to "any" so the model is required to commit to one of the two tools rather than answering in prose.',
+        'Add a PreToolUse hook that inspects each call and swaps it to the other tool whenever the input type looks mismatched.',
+        'Lower the temperature of the requests so that the model selects between the two similarly-described tools more consistently.'
+      ],
+      answer: 0,
+      why: 'The blueprint’s escalation ladder is: rewrite descriptions → rename to eliminate conceptual overlap → split generic tools into purpose-specific ones. The name itself carries selection signal; two tools that share the verb "analyze" stay confusable however good their descriptions.',
+      trap: 'Option B guarantees a tool is called but does nothing to pick the right one — "any" leaves the choice to exactly the discrimination that is failing. Option C patches symptoms with hidden rerouting the model never learns from.'
+    },
+    {
+      ts: 'TS 2.1',
+      stem: 'Tool descriptions look excellent, yet requests containing the word "document" consistently misroute to analyze_document even for web content. What should you audit?',
+      options: [
+        'The system prompt, for keyword-sensitive instructions that create unintended associations with tool names.',
+        'The input schemas, for required fields whose names overlap between the two similarly-purposed tools.',
+        'The conversation history, for earlier tool results that bias the model toward the more recently used tool.',
+        'The MCP server manifest, for a tool-priority ordering that ranks analyze_document above its alternatives.'
+      ],
+      answer: 0,
+      why: 'System prompt wording steers selection, and keyword-sensitive instructions ("always analyze documents thoroughly") can override well-written descriptions by building an association between a word and a tool name. When descriptions are right and selection is still wrong, the system prompt is the named suspect.',
+      trap: 'Option D invents a priority-ordering mechanism that does not exist — there is no ranking table; selection is text matching over names, descriptions and schemas plus the system prompt.'
+    },
+    {
+      ts: 'TS 2.3',
+      stem: 'A research coordinator’s subagents each have access to all 18 tools in the system "for flexibility", and tool selection reliability is poor across every agent. What does the blueprint prescribe?',
+      options: [
+        'Restrict each subagent to the four or five tools its role needs, with narrow cross-role tools only for high-frequency needs.',
+        'Keep all tools available to every agent but expand each of the eighteen descriptions until they are mutually unambiguous.',
+        'Introduce a dedicated routing subagent whose only job is choosing which tool every other subagent should call next.',
+        'Group the eighteen tools under one dispatcher tool that takes an action parameter naming the operation to perform.'
+      ],
+      answer: 0,
+      why: 'Tool count itself degrades selection — 18 tools versus 4–5 enlarges the discrimination problem, and agents misuse tools outside their specialisation simply because they are present. Scoped access per role is the fix, with tightly-scoped cross-role tools (like verify_fact) for the common cases.',
+      trap: 'Option B treats a structural problem as a wording problem: perfect descriptions cannot restore the reliability lost to a 18-way choice. Option D hides the same 18-way choice inside a parameter, where the schema gives even less selection support.'
+    },
+    {
+      ts: 'TS 2.3',
+      stem: 'A document-extraction pipeline must guarantee that extract_metadata runs before any enrichment tool is considered. Which configuration achieves this?',
+      options: [
+        'Force it with tool_choice {"type": "tool", "name": "extract_metadata"}, then handle later steps in follow-up turns.',
+        'Set tool_choice to {"type": "any"} so the model must call a tool and will naturally begin with metadata extraction.',
+        'Set tool_choice to {"type": "auto"} and state in the system prompt that metadata extraction must always run first.',
+        'List extract_metadata first in the tools array, since the model prefers tools in the order they are presented to it.'
+      ],
+      answer: 0,
+      why: 'Forced tool selection is the only setting that guarantees a specific tool runs. The forced choice applies to that request; subsequent turns relax to auto or any for the enrichment steps.',
+      trap: 'Option B guarantees some tool is called, not which one. Option C is a prompt-based request for deterministic behaviour — L03’s lesson — and option D relies on an ordering preference that is not a contract.'
+    },
+    {
+      ts: 'TS 2.3',
+      stem: 'Your pipeline parses structured data out of tool calls, and the document type — hence the right extraction schema — varies per request. Which tool_choice fits, and why?',
+      options: [
+        '"any" — the model must call some tool, so structured output is guaranteed while schema choice stays with the model.',
+        '"auto" — the model retains full discretion, which is safest when the document type cannot be known in advance.',
+        'Forced selection — pin one extraction tool so that every document is processed through an identical schema.',
+        '"any" — it makes the model try each extraction schema in turn until one of them validates against the document.'
+      ],
+      answer: 0,
+      why: 'With "any", a tool call is guaranteed — no conversational text can come back and break the parser — while the model still picks which extraction schema fits the document. That is exactly the split of responsibilities you want here.',
+      trap: 'Option B leaves the text-response hole open: with auto, the model may answer in prose and your parser crashes. Option D describes retry behaviour that "any" does not have — it constrains one response, not a search over schemas.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

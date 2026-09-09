@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock 3 Debrief — The Smoothing Reflex</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+<link rel="stylesheet" href="../assets/diagram.css">
+<style>
+  .twocol { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin:1.4rem 0; }
+  @media(max-width:38rem){.twocol{grid-template-columns:1fr}}
+  .missrow { border-left:3px solid var(--bad); background:var(--bad-bg); border-radius:4px; padding:.75rem 1rem; margin:.7rem 0; font-size:.9rem; }
+  .missrow b { color: var(--bad); }
+  .fixrow { border-left:3px solid var(--good); background:var(--good-bg); border-radius:4px; padding:.75rem 1rem; margin:.7rem 0 1.4rem; font-size:.9rem; }
+  .fixrow b { color: var(--good); }
+  .example { border:1px solid var(--rule); border-radius:6px; padding:1rem 1.2rem; margin:1.2rem 0; background:var(--paper); font-size:.9rem; }
+  .example h4 { margin:0 0 .5rem; font-family:var(--mono); font-size:.66rem; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); }
+  .example pre { margin:.6rem 0; font-size:.76rem; }
+  .quote { font-style:italic; color:var(--ink-soft); border-left:2px solid var(--rule); padding-left:.8rem; margin:.6rem 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Mock 3 debrief · 883/1000 · you are exam-ready</p>
+  <h1>The Smoothing Reflex</h1>
+  <p class="standfirst">Three mocks, three different habits. Mock 1 was missing knowledge. Mock 2 was
+  reaching for fancy mechanisms. Mock 3 is subtler: five of your seven misses share one instinct —
+  when a signal is <em>inconvenient</em>, you choose the option that keeps things running smoothly.
+  The exam wants you to honour the signal, even when it's awkward.</p>
+
+  <div class="stats">
+    <div class="stat good"><span class="n">883</span><span class="l">scaled · PASSED · +163 over cut</span></div>
+    <div class="stat good"><span class="n">D1 94% · D3 100%</span><span class="l">Mock 2 debrief worked</span></div>
+    <div class="stat bad"><span class="n">D5 67%</span><span class="l">3 of 9 — today's target</span></div>
+  </div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 640 190" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Trajectory across three mocks: 638, 732, 883, with the 720 pass line.">
+      <text x="8" y="18" font-size="13" font-weight="600">Your trajectory</text>
+      <line x1="60" y1="150" x2="600" y2="150" class="rule-line"/>
+      <line x1="60" y1="150" x2="60" y2="40" class="rule-line"/>
+      <!-- pass line at 720: scale 500..1000 over y 150..40 → y = 150 - (v-500)/500*110 -->
+      <line x1="60" y1="101.6" x2="600" y2="101.6" class="wire dash" stroke="var(--accent)"/>
+      <text x="604" y="105" font-size="9.5" class="accent-text">720 pass</text>
+      <!-- points -->
+      <circle cx="140" cy="119.6" r="6" class="bar-bad"/>
+      <text x="140" y="140" text-anchor="middle" font-size="11" class="bad-text" font-weight="700">638</text>
+      <text x="140" y="170" text-anchor="middle" font-size="9.5" class="dim">Mock 1</text>
+      <circle cx="330" cy="99" r="6" class="bar-good"/>
+      <text x="330" y="88" text-anchor="middle" font-size="11" class="good-text" font-weight="700">732</text>
+      <text x="330" y="170" text-anchor="middle" font-size="9.5" class="dim">Mock 2</text>
+      <circle cx="520" cy="65.7" r="6" class="bar-good"/>
+      <text x="520" y="55" text-anchor="middle" font-size="11" class="good-text" font-weight="700">883</text>
+      <text x="520" y="170" text-anchor="middle" font-size="9.5" class="dim">Mock 3</text>
+      <line x1="146" y1="119" x2="324" y2="100" class="wire"/>
+      <line x1="336" y1="98" x2="514" y2="67" class="wire"/>
+    </svg>
+    <p class="cap">+94 then +151 — each debrief moved the score</p>
+  </div>
+
+  <h2>1. The reflex, named</h2>
+
+  <p>Read what you picked. In each case the correct answer was the <em>less comfortable</em> one:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Situation</th><th>You picked (smooth it over)</th><th>Correct (honour the signal)</th></tr>
+    <tr><td>Customer: "speak to a human, don't fix this yourself"</td>
+      <td class="no">gather order details first, for a nicer handoff</td>
+      <td class="yes">escalate immediately — no investigation</td></tr>
+    <tr><td>Search subagent fails</td>
+      <td class="no">return empty-as-success so downstream "degrades gracefully"</td>
+      <td class="yes">recover locally, else propagate the failure with partials</td></tr>
+    <tr><td>Two credible sources disagree</td>
+      <td class="no">rank by credibility, report the winner</td>
+      <td class="yes">annotate both + require dates</td></tr>
+    <tr><td>Review category is 70% false positives</td>
+      <td class="no">keep it live, add a "please be patient" banner</td>
+      <td class="yes">temporarily disable it</td></tr>
+    <tr><td>Session's analysis is mostly stale</td>
+      <td class="no">resume and re-read files incrementally</td>
+      <td class="yes">start fresh with a summary of conclusions</td></tr>
+  </table>
+  </div>
+
+  <div class="key">
+    <span class="key-label">The rule that catches all five</span>
+    <p>When an option's appeal is that it <b>avoids friction</b> — keeps working, keeps helping,
+    keeps the feature on, picks a winner so nobody has to see a conflict — be suspicious. The exam
+    treats friction as <em>information</em>. A failure is a fact to report. A conflict is a finding to
+    surface. A refusal is an instruction to obey. Smoothing any of them over hides the truth from
+    whoever decides next.</p>
+  </div>
+
+  <h2>2. Escalation: the signal decides, not the issue</h2>
+
+  <p>On Mock 2 you escalated an <em>angry</em> customer with a routine issue (too eager). On Mock 3 you
+  kept working on a customer who <em>explicitly asked you to stop</em> (not eager enough). Opposite
+  errors, one cause: you're judging the <b>issue</b> ("this looks routine") when the exam wants you
+  to classify the <b>signal</b>.</p>
+
+  <div class="example">
+    <h4>Real example — the exact message</h4>
+    <p class="quote">"I want to speak to a human. Do not try to fix this yourself."</p>
+    <p>Which door is this? Not sentiment (they're not angry, they're <em>clear</em>). Not a policy gap.
+    It is <b>door #1: an explicit request for a human</b> — and door #1 is <b>unconditional</b>.
+    The issue being routine is irrelevant; the customer closed the case to the agent.</p>
+    <div class="twocol">
+      <div class="missrow"><b>What you picked, from the customer's chair:</b> "I said don't work on it.
+      The bot said 'understood' and then… went and looked up my order anyway. It didn't listen."
+      Investigating "for the handoff" <em>is</em> working the case. Trust damage is the same.</div>
+      <div class="fixrow"><b>Correct, from the customer's chair:</b> "I asked for a human and got one."
+      The human can gather details themselves. Obeying costs you nothing; overriding costs trust.</div>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <svg viewBox="0 0 660 150" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Decision: classify the signal first. Explicit request → escalate now, unconditional. Sentiment → not a trigger, resolve. Policy gap → escalate. Routine issue → resolve.">
+      <rect x="230" y="8" width="200" height="34" rx="6" class="box"/>
+      <text x="330" y="30" text-anchor="middle" font-size="11.5" font-weight="600">What KIND of signal is it?</text>
+      <line x1="280" y1="42" x2="110" y2="70" class="wire"/><line x1="330" y1="42" x2="330" y2="70" class="wire"/><line x1="380" y1="42" x2="550" y2="70" class="wire"/>
+      <rect x="20" y="72" width="180" height="60" rx="6" class="accent-fill"/>
+      <text x="110" y="92" text-anchor="middle" font-size="11" font-weight="700" class="accent-text">explicit "get me a human"</text>
+      <text x="110" y="108" text-anchor="middle" font-size="9.5">→ escalate NOW, unconditional</text>
+      <text x="110" y="122" text-anchor="middle" font-size="9" class="dim">issue difficulty is irrelevant</text>
+      <rect x="240" y="72" width="180" height="60" rx="6" class="bad-fill"/>
+      <text x="330" y="92" text-anchor="middle" font-size="11" font-weight="700" class="bad-text">anger / frustration</text>
+      <text x="330" y="108" text-anchor="middle" font-size="9.5">→ NOT a trigger; resolve warmly</text>
+      <text x="330" y="122" text-anchor="middle" font-size="9" class="dim">escalate only if they then ask</text>
+      <rect x="460" y="72" width="180" height="60" rx="6" class="accent-fill"/>
+      <text x="550" y="92" text-anchor="middle" font-size="11" font-weight="700" class="accent-text">policy gap / no progress</text>
+      <text x="550" y="108" text-anchor="middle" font-size="9.5">→ escalate with handoff</text>
+      <text x="550" y="122" text-anchor="middle" font-size="9" class="dim">the agent can't answer it</text>
+    </svg>
+    <p class="cap">classify the signal, then act — never judge the issue first</p>
+  </div>
+
+  <h2>3. "Degrade gracefully" is the trap's costume</h2>
+
+  <p>You picked "return empty results marked as success when a search fails, so downstream degrades
+  gracefully instead of halting." That phrase — <em>degrade gracefully</em> — is good engineering
+  vocabulary wrapped around the single worst anti-pattern in the blueprint: <b>silent
+  suppression</b>.</p>
+
+  <div class="example">
+    <h4>Real example — what downstream actually believes</h4>
+    <pre><code>Search for: "EU battery recycling regulations 2026"
+Reality:    the search API timed out.
+
+Option A (yours):  returns  { results: [], status: "ok" }
+  → synthesis agent believes: "there are no EU battery regulations"
+  → final report states it as fact. Nobody knows a search broke.
+
+Option B+E (correct):  local retry ×2 fails →
+  returns { error: "timeout", attempted: "EU battery recycling 2026",
+            partial: [3 sources from first page], isError: true }
+  → coordinator: retry with different phrasing, or proceed and
+    annotate "EU regulations: coverage gap, source unavailable"</code></pre>
+    <p>"Gracefully" hid the fact that <b>a report now contains a false negative it cannot doubt</b>.
+    Halting isn't the alternative — that's the other anti-pattern (option C). The middle is the
+    ladder: recover locally → propagate structure with partials → let the coordinator decide → annotate gaps.</p>
+  </div>
+
+  <h2>4. Conflicts are information — and dates dissolve most of them</h2>
+
+  <p>You correctly chose "annotate both values" but paired it with "rank by credibility and report only
+  the higher" — which is the <em>same silent selection</em> as "pick the larger number", with a
+  credibility veneer. You missed the second correct answer: <b>require dates</b>.</p>
+
+  <div class="example">
+    <h4>Real example — why dates matter more than credibility</h4>
+    <pre><code>Source A (Gartner):     "EV battery market: $4.2B"
+Source B (McKinsey):    "EV battery market: $5.1B"
+
+Without dates → looks like a conflict → someone "picks the credible one"
+With dates    → A is a 2024 figure, B is 2026.  Not a conflict at all:
+                the market grew. Both are correct.
+
+Structured output the subagent SHOULD return:
+{ claim: "$4.2B", source: "Gartner", collected: "2024-Q3" }
+{ claim: "$5.1B", source: "McKinsey", collected: "2026-Q1" }
+{ conflict_detected: true, note: "figures from different years" }</code></pre>
+    <p>Credibility ranking would have thrown away a correct figure. Dates turned an apparent
+    contradiction into a trend. That's why the blueprint makes dates a <em>structural</em>
+    requirement (TS 5.6), not a nice-to-have.</p>
+  </div>
+
+  <h2>5. Turning a feature off is not giving up</h2>
+
+  <p>Third time this move has felt wrong to you. The style category is 70% false positives, and
+  developers have started ignoring <em>security</em> findings too. You chose "keep everything live,
+  add a banner asking for patience."</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 640 170" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Dismissal rate of ALL findings over weeks. With the noisy category live it climbs toward 80% even with a banner. With it disabled, dismissal drops back near the accurate categories' baseline.">
+      <text x="8" y="18" font-size="13" font-weight="600">% of ALL findings developers dismiss</text>
+      <line x1="50" y1="140" x2="600" y2="140" class="rule-line"/><line x1="50" y1="140" x2="50" y2="35" class="rule-line"/>
+      <text x="18" y="40" font-size="9.5" class="dim">80%</text><text x="18" y="142" font-size="9.5" class="dim">0%</text>
+      <text x="325" y="160" text-anchor="middle" font-size="9.5" class="dim">weeks →</text>
+      <path d="M 60 125 C 200 110, 350 60, 590 42" class="wire" style="stroke:var(--bad);stroke-width:2.5" fill="none"/>
+      <text x="470" y="52" font-size="10" class="bad-text" font-weight="600">keep live + banner</text>
+      <path d="M 60 125 C 150 118, 250 128, 590 122" class="wire" style="stroke:var(--good);stroke-width:2.5" fill="none"/>
+      <text x="470" y="115" font-size="10" class="good-text" font-weight="600">disable style category</text>
+      <text x="300" y="98" font-size="9" class="dim">a banner changes nothing about the incentive —</text>
+      <text x="300" y="110" font-size="9" class="dim">70% noise still teaches "ignore the bot"</text>
+    </svg>
+    <p class="cap">trust is the asset; one contagious category spends it for all the others</p>
+  </div>
+
+  <p>Developers don't grade findings one by one — they form <em>one</em> opinion of the bot. A banner
+  asks humans to absorb a cost the configuration should eliminate. Disabling protects the accurate
+  categories while you fix the noisy one offline. You lose style coverage for two weeks; you keep
+  the security findings being read at all.</p>
+
+  <h2>6. Stale sessions: it's a magnitude call</h2>
+
+  <p>L04 gave you three moves for a stale session. You applied the <em>middle</em> one to the
+  <em>extreme</em> case.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 660 130" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="A dial from minor drift to substantial change. Minor: resume and name changed files. Substantial (most tool results stale): start fresh with a summary.">
+      <line x1="60" y1="60" x2="600" y2="60" class="wire" style="stroke-width:3"/>
+      <text x="60" y="45" font-size="10" class="dim">nothing changed</text>
+      <text x="600" y="45" text-anchor="end" font-size="10" class="dim">most analysed code rewritten</text>
+      <rect x="60" y="72" width="150" height="44" rx="5" class="good-fill"/>
+      <text x="135" y="90" text-anchor="middle" font-size="10.5" font-weight="700" class="good-text">resume as-is</text>
+      <text x="135" y="106" text-anchor="middle" font-size="9">context still valid</text>
+      <rect x="255" y="72" width="150" height="44" rx="5" class="accent-fill"/>
+      <text x="330" y="90" text-anchor="middle" font-size="10.5" font-weight="700" class="accent-text">resume + name files</text>
+      <text x="330" y="106" text-anchor="middle" font-size="9">"3 files changed" — targeted re-read</text>
+      <rect x="450" y="72" width="150" height="44" rx="5" class="bad-fill"/>
+      <text x="525" y="90" text-anchor="middle" font-size="10.5" font-weight="700" class="bad-text">fresh + summary</text>
+      <text x="525" y="106" text-anchor="middle" font-size="9">"47 files, core rewritten"</text>
+      <circle cx="525" cy="60" r="7" class="bar-bad"/>
+      <text x="525" y="30" text-anchor="middle" font-size="9.5" class="bad-text" font-weight="600">Q18 was HERE ↓</text>
+    </svg>
+    <p class="cap">the stem said "most of its tool results now describe code that no longer exists" — that's the far right</p>
+  </div>
+
+  <div class="example">
+    <h4>Real example — the git diff decides</h4>
+    <pre><code>$ git diff --stat last-week..HEAD
+ 3 files changed, 41 insertions(+), 12 deletions(-)
+ → resume, tell Claude: "auth.ts, session.ts, config.ts changed; re-read those"
+
+$ git diff --stat last-week..HEAD
+ 47 files changed, 3,208 insertions(+), 2,911 deletions(-)
+ → its whole picture is fiction now. Incremental re-reading leaves stale
+   and fresh facts side by side; the model blends them. Start fresh:
+   "Last week's conclusions: X, Y, Z still hold. Re-read what you need."</code></pre>
+  </div>
+
+  <h2>7. Two facts to pin down</h2>
+
+  <div class="twocol">
+    <div class="example">
+      <h4>Batch API — what it can and cannot do</h4>
+      <pre><code>✓ include tool definitions in requests
+✓ return tool_use blocks in results
+✗ EXECUTE a tool and CONTINUE mid-request
+  (that needs a live loop; a batch is
+   one request → one response, done)
+✗ any completion-time guarantee
+  (no SLA, at any hour — up to 24h)
+✓ results matched by custom_id
+✗ results matched by position/order</code></pre>
+      <p>You picked "supports multi-turn tool calling." It returns the <em>request</em> for a tool;
+      nobody is there to run it and send the result back. That's the whole reason it can't do
+      agentic work.</p>
+    </div>
+    <div class="example">
+      <h4>isError — envelope vs payload</h4>
+      <pre><code>YOUR PICK — structured, but still "success":
+{ content: [{ type:"text",
+    text: '{"error":"could not parse"}' }] }
+→ agent sees a SUCCESSFUL result whose
+  text happens to contain an error. It
+  may treat it as document content.
+
+CORRECT — flag on the envelope:
+{ content: [{ type:"text",
+    text: '{"errorCategory":"validation",
+            "isRetryable":false, ...}' }],
+  isError: true }
+→ machine-recognisable failure. THEN the
+  structured payload guides recovery.</code></pre>
+      <p>L06's lesson was "structure the error" — you did. But structure goes <em>inside</em> a result
+      whose envelope already says <code>isError: true</code>. Both layers.</p>
+    </div>
+  </div>
+
+  <div class="key">
+    <span class="key-label">Where you are</span>
+    <p><b>883 with every domain ≥ 67% is exam-ready.</b> This debrief is the last polish: one habit
+    (honour inconvenient signals) and two facts. Clear the re-test below and book Pearson VUE.
+    Remember the standing traps on the day: <code>Task</code> not <code>Agent</code>; Edit doctrine not
+    <code>sed</code>; <code>-p</code> not stdin tricks; and now — <em>friction is information</em>.</p>
+  </div>
+
+  <div id="quiz" class="quiz"></div>
+
+  <div class="foot">
+    <p><b>Mock 3 debrief</b> · from your 883/1000 attempt (2026-09-08)</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="../lessons/0016-escalation-and-error-propagation.html">L16 Escalation &amp; Errors</a>
+      <a href="../lessons/0014-calibration-and-review-routing.html">L14 Calibration</a>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'DRILL-mock3-debrief',
+  title: 'Re-test — honour the signal',
+  passMark: 0.85,
+  questions: [
+    { ts: '5.2',
+      stem: 'A customer opens with: "Transfer me to a person. I don’t want the bot touching my account." The issue appears to be a simple address correction. What does the agent do?',
+      options: [
+        'Escalate immediately with whatever context it already has — an explicit request is honoured without investigation.',
+        'Look up the account first so the human receives a complete handoff, then transfer.',
+        'Explain that the fix takes ten seconds and offer to do it before transferring.',
+        'Ask one clarifying question to confirm they truly want a human, then transfer.'],
+      answer: 0,
+      why: 'Explicit request is door #1 and unconditional. Even a lookup "for the handoff" is working a case the customer closed to the agent. Obeying costs nothing; overriding costs trust.',
+      trap: 'Option B is your Mock 3 pick in new clothes — helpful-sounding, but the customer said "don’t touch my account". The human can gather details themselves.' },
+    { ts: '5.3',
+      stem: 'A document-fetch subagent’s API times out on 3 of 10 sources. Which behaviour is correct?',
+      options: [
+        'Retry the 3 locally; if still failing, return the 7 successes plus a structured error naming the 3 failures and what was attempted.',
+        'Return the 7 successes as the complete result set so the pipeline keeps flowing without interruption.',
+        'Return an empty result marked successful for the 3 failures so downstream degrades gracefully.',
+        'Halt the whole research run and alert the operator, since partial sources risk a misleading report.'],
+      answer: 0,
+      why: 'The ladder: recover locally, propagate what you can’t fix with partials, let the coordinator decide, annotate gaps. Options B and C both hide that 3 fetches broke; option D over-reacts.',
+      trap: '"Degrades gracefully" (C) and "keeps flowing" (B) are the smoothing reflex — they turn a failure into a false belief downstream cannot doubt.' },
+    { ts: '5.6',
+      stem: 'Two reputable sources give different unemployment figures for the same country. Which TWO practices handle this correctly? (Select 2.)',
+      options: [
+        'Annotate both figures with their sources and surface the disagreement for the coordinator to reconcile.',
+        'Require publication or collection dates in subagents’ structured outputs.',
+        'Rank the sources by institutional credibility and report only the higher-ranked figure.',
+        'Report the more recent figure and drop the older one as superseded.'],
+      answer: [0, 1],
+      why: 'Conflicts are information: preserve both with attribution, and carry dates — "conflicting" figures are frequently different measurement moments. Ranking (C) and recency (D) are both silent selection.',
+      trap: 'Credibility ranking (your Mock 3 pick) feels rigorous but performs the exact silent selection the blueprint forbids — with a veneer.' },
+    { ts: '4.1',
+      stem: 'The "naming conventions" review category is 65% false positives and developers have started dismissing correctness findings too. Right move?',
+      options: [
+        'Temporarily disable the naming category while its prompt is improved, protecting trust in the accurate categories.',
+        'Keep all categories live and post a note explaining precision is being tuned.',
+        'Downgrade naming findings to "info" severity so they are visually de-emphasised.',
+        'Increase the volume of correctness findings so they outnumber the noisy ones.'],
+      answer: 0,
+      why: 'High-FP categories are contagious — they teach developers to ignore the bot entirely. Disabling the offender protects the credibility of every other category. A note asks humans to absorb a cost the config should remove.',
+      trap: 'Keeping it live with a note is your Mock 3 pick. Turning a feature off feels like giving up; the exam values trust over coverage.' },
+    { ts: '1.7',
+      stem: 'You want to resume a two-week-old analysis session, but a major refactor has since rewritten most of the modules it analysed. Reliable approach?',
+      options: [
+        'Start a new session seeded with a structured summary of the prior conclusions; the tool results are too stale to resume.',
+        'Resume and ask Claude to re-read each changed file incrementally, correcting its understanding as it goes.',
+        'Resume and run /compact first so the stale tool results are compressed before new work.',
+        'Resume as-is; Claude detects file changes automatically on the next read.'],
+      answer: 0,
+      why: 'Magnitude decides: minor known drift → resume and name the changed files; most of the analysis stale → fresh session with a conclusions summary. "Rewritten most modules" is the far end of the dial.',
+      trap: 'Incremental re-reading (your pick) is the right move for 3 changed files, not 47 — it leaves stale and fresh facts side by side and the model blends them.' },
+    { ts: '4.5',
+      stem: 'Which TWO statements about the Message Batches API are accurate? (Select 2.)',
+      options: [
+        'Blocking workflows such as pre-merge checks should stay on the synchronous API.',
+        'It suits latency-tolerant workloads like nightly test generation and weekly audits.',
+        'It supports executing tools and continuing the same request with their results.',
+        'Results return in submission order, so responses are matched positionally.'],
+      answer: [0, 1],
+      why: 'The decision rule in both directions. The batch API cannot execute a tool mid-request (one request, one response, nobody there to run the tool), and results correlate by custom_id, not position.',
+      trap: 'Multi-turn tool calling (C) was your Mock 3 pick. A batch can RETURN a tool_use request; it cannot run the tool and continue.' },
+    { ts: '2.2',
+      stem: 'Your MCP tool fails to parse a document. How should the failure be returned so the agent recognises it as a failure?',
+      options: [
+        'With the MCP isError flag set on the result, and a structured error body inside it.',
+        'As a normal result whose text is a JSON object containing an "error" field.',
+        'As a normal result whose text begins with "ERROR:" so the model notices.',
+        'By throwing an exception so the MCP connection drops and the agent retries.'],
+      answer: 0,
+      why: 'Envelope and payload are two layers. isError: true is the protocol-level signal that this is a failure; the structured body then guides recovery. Structure alone inside a "successful" result still reads as content.',
+      trap: 'The JSON-in-text option (your pick) is L06 applied at the wrong layer — right instinct to structure it, but without the flag the agent sees a success.' }
+  ]
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 08 — Configuration Hierarchy</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 3 · Lesson 08 of 16</p>
+  <h1>Configuration Hierarchy</h1>
+  <p class="standfirst">You use CLAUDE.md every day — but the exam probes the machinery
+  underneath: which file loads when, what <code>@import</code> actually does and doesn't do,
+  and when a glob-scoped rule beats a directory file. This is where daily fluency meets
+  exam-grade precision.</p>
+
+  <div class="meta">
+    <span><b>Domain 3</b> Claude Code Configuration &amp; Workflows · 20%</span>
+    <span><b>Covers</b> TS 3.1, TS 3.3</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. The three levels, and who each serves</h2>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Level</th><th>Location</th><th>Applies to</th><th>Shared with team?</th></tr>
+    <tr><td><b>User</b></td><td><code>~/.claude/CLAUDE.md</code></td>
+      <td>All <em>your</em> projects</td><td class="no">No — never in version control</td></tr>
+    <tr><td><b>Project</b></td><td><code>./CLAUDE.md</code> or <code>./.claude/CLAUDE.md</code></td>
+      <td>Everyone in this repo</td><td class="yes">Yes — committed</td></tr>
+    <tr><td><b>Directory</b></td><td><code>&lt;subdir&gt;/CLAUDE.md</code></td>
+      <td>Work touching that subtree</td><td class="yes">Yes — committed</td></tr>
+  </table>
+  </div>
+
+  <p>Two loading behaviours the exam expects you to know precisely
+  <span class="ts">TS 3.1</span>:</p>
+
+  <ul>
+    <li><b>Files at and above the working directory load at launch</b>, ordered root-down, so
+      more specific instructions are read last. All levels <em>concatenate</em> — nothing
+      overrides anything.</li>
+    <li><b>Subdirectory CLAUDE.md files load on demand</b> — only when Claude reads files in
+      that subtree. They cost no context until relevant.</li>
+  </ul>
+
+  <div class="key">
+    <span class="key-label">The diagnostic scenario the exam reuses</span>
+    <p>A new teammate clones the repo and Claude ignores "the team's" conventions — because those
+    conventions live in someone's <b>user-level</b> <code>~/.claude/CLAUDE.md</code>, which is
+    not in version control and never reaches teammates. Anything the team must share belongs at
+    <b>project level</b>. The fix is a move, not a rewrite.</p>
+  </div>
+
+  <h2>2. <code>@import</code>: modularity, not context savings</h2>
+
+  <p>A CLAUDE.md can reference other files with <code>@path</code> syntax
+  <span class="ts">TS 3.1</span>:</p>
+
+<pre><code>See @README for the project overview.
+
+# Standards
+- API conventions: @docs/api-standards.md
+- Git workflow:    @docs/git-instructions.md
+- Personal prefs (cross-worktree): @~/.claude/my-prefs.md</code></pre>
+
+  <p>The mechanics that get tested:</p>
+  <ul>
+    <li>Relative paths resolve <b>relative to the file containing the import</b>, not the
+      working directory. Imports recurse to a <b>maximum depth of four hops</b>.</li>
+    <li>Imported files are expanded <b>at launch</b> — so <code>@import</code> organises content;
+      it does <b>not</b> reduce context consumption. If the goal is loading less, you want
+      path-scoped rules (below).</li>
+    <li>A path inside backticks (<code>`@README`</code>) is literal text, not an import.</li>
+    <li>The blueprint's use case: each package's CLAUDE.md imports <b>only the standards files
+      relevant to that package</b>, chosen by the maintainer who knows the domain.</li>
+  </ul>
+
+  <h2>3. <code>.claude/rules/</code>: split the monolith</h2>
+
+  <p>A 600-line CLAUDE.md is a real failure mode — adherence drops as the file grows.
+  The structured fix is topic files in <code>.claude/rules/</code>
+  <span class="ts">TS 3.1</span>:</p>
+
+<pre><code>.claude/
+├── CLAUDE.md            # short: identity, build commands, pointers
+└── rules/
+    ├── testing.md
+    ├── api-conventions.md
+    └── deployment.md</code></pre>
+
+  <p>A rule file <b>without</b> frontmatter loads at launch, same priority as
+  <code>.claude/CLAUDE.md</code> — you have gained organisation, not laziness. The laziness comes
+  from the <code>paths</code> field.</p>
+
+  <h2>4. Path-scoped rules: load only what the work touches</h2>
+
+  <p>Add YAML frontmatter with glob patterns, and the rule loads <b>only when Claude reads a
+  file matching them</b> <span class="ts">TS 3.3</span>:</p>
+
+<pre><code>---
+paths:
+  - "terraform/**/*"
+  - "**/*.test.{ts,tsx}"
+---
+
+# Rules that apply only to matching files
+- Never hardcode region names; use var.region
+- Test files use the arrange / act / assert layout</code></pre>
+
+  <ul>
+    <li>Irrelevant conventions stay out of context — less noise, fewer tokens, better
+      adherence on what <em>does</em> load.</li>
+    <li>Globs match by <b>pattern, not location</b>: <code>**/*.test.tsx</code> catches every
+      test file wherever it lives.</li>
+    <li>Brace expansion works: <code>src/**/*.{ts,tsx}</code>.</li>
+  </ul>
+
+  <h3>The discrimination the exam actually tests</h3>
+
+  <div class="pair">
+    <div class="do">
+      <h4>Path-scoped rule wins when…</h4>
+      <p>The convention follows a <b>file type spread across the tree</b>. Test files sit next to
+      the code they test — <code>Button.test.tsx</code> beside <code>Button.tsx</code> — in
+      dozens of directories. One glob rule covers all of them.</p>
+    </div>
+    <div class="dont">
+      <h4>Directory CLAUDE.md wins when…</h4>
+      <p>The convention belongs to a <b>place</b>: everything under <code>packages/api/</code>
+      uses async/await error handling. If the boundary is a subtree, a file in that subtree
+      is the natural home.</p>
+    </div>
+  </div>
+
+  <p>Notice the failure if you choose wrong: covering scattered test files with directory
+  CLAUDE.md files means <em>one file per directory that contains tests</em> — dozens of
+  copies to keep in sync. That maintenance burden is the tell in exam stems.</p>
+
+  <h2>5. Diagnosing with <code>/memory</code></h2>
+
+  <p>The blueprint names one diagnostic skill <span class="ts">TS 3.1</span>: when behaviour is
+  inconsistent across sessions or teammates, run <b><code>/memory</code></b> to see which memory
+  files exist and are loaded, and edit them from there. The typical finds:</p>
+
+  <ul>
+    <li>An instruction living at user level that everyone assumed was project level.</li>
+    <li>Two files giving contradictory guidance — Claude picks one arbitrarily.</li>
+    <li>A rule whose glob never matches the files it was meant for.</li>
+  </ul>
+
+  <p>(In current builds, <code>/context</code> additionally shows what actually loaded into
+  <em>this</em> session — useful, but <code>/memory</code> is the command the exam names.)</p>
+
+  <div class="note">
+    <span class="note-label">One mental model for the whole lesson</span>
+    <p>Every mechanism here answers one question: <b>who needs this instruction, and when?</b>
+    Everyone always → project CLAUDE.md. Just you → user level. Only when touching certain
+    files → path-scoped rule. Only in one subtree → directory CLAUDE.md. Only on demand for a
+    task → that's a <em>skill</em>, which is Lesson 09.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://code.claude.com/docs/en/memory">How Claude remembers your project</a>
+    (Claude Code docs) — the location table, "How CLAUDE.md files load", and the
+    <code>.claude/rules/</code> section. As a daily user, read it looking for what you
+    <em>didn't</em> know: import depth, launch-time expansion, on-demand subdirectory loading.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> Worth testing yourself:
+    <em>"my CLAUDE.md is 500 lines — walk through what moves to rules, what gets path-scoped,
+    and what stays."</em> Bring your real Logiciel CLAUDE.md and we'll do the exercise on it —
+    that's Exercise 2 from the official guide, on live material.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 08</b> · Domain 3 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0007-mcp-and-built-in-tools.html">← L07 MCP &amp; Built-ins</a>
+      <a href="../reference/00-exam-blueprint.html">Ref 00 — Blueprint</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L08-config-hierarchy',
+  title: 'Retrieval check — configuration hierarchy',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Code Generation with Claude Code — a team integrating Claude Code into its development workflow.',
+      ts: 'TS 3.1',
+      stem: 'A new developer clones the repo, but Claude ignores the team’s testing conventions that work fine on the lead’s machine. What is the most likely cause?',
+      options: [
+        'The conventions live in the lead’s user-level ~/.claude/CLAUDE.md, which version control never distributes.',
+        'The new developer has not yet run /init, which is what generates the project conventions on a fresh clone.',
+        'Project CLAUDE.md files require each developer to approve them once per machine before they begin loading.',
+        'The conventions sit in a subdirectory CLAUDE.md, which only loads for whoever originally created that file.'
+      ],
+      answer: 0,
+      why: 'User-level configuration applies only to that user — it lives in the home directory and never travels through version control. Instructions the whole team needs belong at project level. The fix is moving the content, not rewriting it.',
+      trap: 'Option C borrows the approval behaviour of project-scoped MCP servers (L07) — CLAUDE.md files have no approval gate. Option D invents per-author loading; subdirectory files load for anyone whose work touches that subtree.'
+    },
+    {
+      ts: 'TS 3.1',
+      stem: 'Which statement about @import in CLAUDE.md is accurate?',
+      options: [
+        'Imports expand at launch, so they organise content without reducing what enters the context window.',
+        'Imports load lazily on first reference, so they reduce context consumption compared with inline content.',
+        'Imports resolve relative to the current working directory, regardless of which file declares them.',
+        'Imports may nest without limit, since each imported file is expanded before its own imports are read.'
+      ],
+      answer: 0,
+      why: 'Imported files are expanded and loaded at launch alongside the CLAUDE.md that references them. @import is an organisation tool; if the goal is loading less into context, the mechanism is path-scoped rules, not imports.',
+      trap: 'Option B describes the behaviour people assume imports have — lazy loading — which is exactly why the exam tests it. Paths resolve relative to the containing file, and nesting caps at four hops.'
+    },
+    {
+      ts: 'TS 3.3',
+      stem: 'Test files sit beside the code they test (Button.test.tsx next to Button.tsx) across dozens of directories, and all tests must follow one set of conventions. What is the most maintainable configuration?',
+      options: [
+        'One rule file in .claude/rules/ with paths frontmatter matching **/*.test.tsx, loading wherever a test file is read.',
+        'A CLAUDE.md file in each directory that contains test files, holding a copy of the shared testing conventions.',
+        'A section in the root CLAUDE.md describing the conventions, relying on Claude to notice when a file is a test.',
+        'A skill in .claude/skills/ holding the conventions, which developers invoke whenever they ask Claude to write tests.'
+      ],
+      answer: 0,
+      why: 'The convention follows a file type spread across the tree — the glob-rule case. One pattern covers every test file regardless of location, and the rule loads only when a matching file is read.',
+      trap: 'Option B technically works but means dozens of duplicate files to keep in sync — the maintenance burden is the tell. Option D makes deterministic, automatic application depend on someone remembering to invoke a skill.'
+    },
+    {
+      ts: 'TS 3.3',
+      stem: 'What does the paths frontmatter field in a .claude/rules/ file actually control?',
+      options: [
+        'When the rule loads into context — only once Claude reads a file matching one of the glob patterns.',
+        'Which files Claude is permitted to edit while the rule is active during the current working session.',
+        'The priority of the rule relative to CLAUDE.md, with pattern-scoped rules overriding broader files.',
+        'Which directories Claude may search when it uses Glob and Grep during codebase exploration work.'
+      ],
+      answer: 0,
+      why: 'paths is a loading condition, nothing more: the rule enters context when Claude works with matching files, and stays out otherwise — saving tokens and keeping irrelevant conventions from diluting relevant ones.',
+      trap: 'Options B and D read paths as a permission or sandbox mechanism — it grants and restricts nothing. And nothing overrides anything in this system: memory files concatenate.'
+    },
+    {
+      ts: 'TS 3.1',
+      stem: 'A 600-line root CLAUDE.md mixes testing, API, deployment and styling guidance, and adherence is degrading. Per the blueprint, what is the restructuring?',
+      options: [
+        'Split it into focused topic files under .claude/rules/ — testing.md, api-conventions.md, deployment.md.',
+        'Compress the file to 200 lines by deleting the less important half of the guidance it currently holds.',
+        'Move the whole file to user level, where longer configuration files are loaded with higher adherence.',
+        'Convert each section into a slash command that developers run when they need that topic’s guidance.'
+      ],
+      answer: 0,
+      why: 'The named pattern for a monolithic CLAUDE.md is topic-specific files in .claude/rules/. Modularity alone helps maintenance; adding paths frontmatter to the topic files then scopes loading to relevant work.',
+      trap: 'Option B trades completeness for size when the structured fix loses nothing. Option D misuses commands — conventions should apply automatically, not wait to be invoked.'
+    },
+    {
+      ts: 'TS 3.1',
+      stem: 'Claude behaves inconsistently across sessions — sometimes following a convention, sometimes not. Which first diagnostic step does the blueprint name?',
+      options: [
+        'Run /memory to verify which memory files exist and are being loaded into the session.',
+        'Run /compact to clear the accumulated context and force every memory file to reload.',
+        'Delete ~/.claude/CLAUDE.md to rule the user level out, then re-test the behaviour.',
+        'Add the convention to the system prompt with --append-system-prompt on each launch.'
+      ],
+      answer: 0,
+      why: 'Diagnosis before surgery: /memory shows which files exist and load, which is where hierarchy bugs reveal themselves — instructions at the wrong level, contradictory files, rules whose globs never match.',
+      trap: 'Options B–D all change state before establishing what is actually loaded. The exam consistently rewards looking at the evidence first — same instinct as the root-cause questions in Domain 1.'
+    }
+  ]
+});
+</script>
+</body>
+</html>

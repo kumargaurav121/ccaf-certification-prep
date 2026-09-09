@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 12 — Criteria &amp; Few-Shot</title>
+<link rel="stylesheet" href="../assets/lesson.css">
+<link rel="stylesheet" href="../assets/quiz.css">
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Domain 4 · Lesson 12 of 16</p>
+  <h1>Criteria &amp; Few-Shot</h1>
+  <p class="standfirst">The schema fixed the shape. What's left is judgement: which findings to
+  report, which cases to escalate, how to handle the ambiguous middle. The exam's position is
+  blunt — vague adjectives don't transfer judgement; categorical criteria and worked examples
+  do.</p>
+
+  <div class="meta">
+    <span><b>Domain 4</b> Prompt Engineering &amp; Structured Output · 20%</span>
+    <span><b>Covers</b> TS 4.1, TS 4.2</span>
+    <span><b>Time</b> ~15 min</span>
+  </div>
+
+  <h2>1. Why "be conservative" doesn't work</h2>
+
+  <p>A code-review bot floods PRs with nitpicks. The instinctive fix: add "be conservative — only
+  report high-confidence findings" to the prompt. The blueprint states flatly that this
+  <b>fails to improve precision</b> <span class="ts">TS 4.1</span>. Why?</p>
+
+  <p>"Conservative" and "high-confidence" are <em>thresholds without a scale</em>. The model has
+  no calibrated internal dial these words adjust — it will produce output that <em>sounds</em>
+  more hedged while flagging roughly the same things. You have changed the tone, not the
+  boundary.</p>
+
+  <p>What moves the boundary is <b>categorical criteria</b> — naming the categories in and the
+  categories out:</p>
+
+  <div class="pair">
+    <div class="dont">
+      <h4>Vague dial</h4>
+      <p>"Check that comments are accurate. Be conservative; only report issues you are highly
+      confident about."</p>
+    </div>
+    <div class="do">
+      <h4>Categorical boundary</h4>
+      <p>"Flag a comment <em>only when its claimed behaviour contradicts the actual code
+      behaviour</em>. Report: bugs, security issues. Skip: minor style, patterns local to one
+      file, naming preferences."</p>
+    </div>
+  </div>
+
+  <p>The left version asks the model to grade its own certainty — L01's unreliable proxy. The
+  right version asks it to <em>classify</em>, which models do well. Report/skip lists, and a
+  contradiction test instead of an accuracy vibe: every term is checkable against the code in
+  front of it.</p>
+
+  <h2>2. False positives are a trust problem</h2>
+
+  <p>The blueprint's framing worth quoting: <b>high false-positive categories undermine
+  confidence in accurate categories</b>. Developers don't evaluate a review bot finding by
+  finding — they form one judgement of the bot. A security check that's right 95% of the time
+  gets ignored because the style checker beside it cries wolf.</p>
+
+  <p>Two prescribed moves <span class="ts">TS 4.1</span>:</p>
+
+  <ul>
+    <li><b>Temporarily disable a high-FP category</b> to restore trust, and improve its prompt
+      offline before re-enabling. A silent category costs less than a noisy wrong one.</li>
+    <li><b>Define severity with concrete code examples per level.</b> "Critical / major / minor"
+      without examples produces inconsistent classification; one worked example of each level
+      anchors the scale.</li>
+  </ul>
+
+  <h2>3. Few-shot: examples as the specification of judgement</h2>
+
+  <p>Explicit criteria set boundaries. But some cases sit <em>on</em> the boundary — and that is
+  what few-shot examples are for <span class="ts">TS 4.2</span>. The blueprint's parameters:</p>
+
+  <ul>
+    <li><b>2–4 targeted examples</b>, chosen from the <em>ambiguous</em> cases — not the easy
+      ones. An example the model would get right anyway teaches nothing.</li>
+    <li>Each example shows the input, the decision, <b>and the reasoning why that action beat the
+      plausible alternative</b>. The reasoning is the payload: it's what lets the model
+      generalise to novel patterns instead of pattern-matching your exact cases.</li>
+    <li>Examples double as <b>format demonstration</b> — location, issue, severity, suggested
+      fix — which is the named fix when detailed instructions still yield inconsistent
+      output shapes.</li>
+  </ul>
+
+<pre><code>&lt;example&gt;
+Input: "I was double-charged and I want a refund NOW."
+Decision: resolve (not escalate)
+Why: anger is present but the issue is a standard duplicate-charge
+     refund — within policy and agent authority. Sentiment alone
+     is not an escalation trigger.
+&lt;/example&gt;
+
+&lt;example&gt;
+Input: "Your competitor sells this for $40 less. Match it or
+        cancel my order."
+Decision: escalate
+Why: policy covers own-site price adjustments only. Competitor
+     matching is a policy gap — escalate rather than improvise
+     a commitment the business hasn't made.
+&lt;/example&gt;</code></pre>
+
+  <p>Note what the pair teaches: the <em>same-looking</em> surface (an unhappy customer) splits
+  on a principle (policy coverage), and the reasoning names it. That principle now transfers to
+  cases neither example mentions.</p>
+
+  <h2>4. Where few-shot is the named fix</h2>
+
+  <p>The blueprint lists specific failure modes whose answer is few-shot examples — recognise
+  them in stems <span class="ts">TS 4.2</span>:</p>
+
+  <div class="scroll-x">
+  <table>
+    <tr><th>Failure</th><th>The few-shot fix</th></tr>
+    <tr><td>Escalation miscalibration (easy cases escalated, hard ones attempted)</td>
+      <td>Criteria + examples demonstrating escalate-vs-resolve on boundary cases</td></tr>
+    <tr><td>Inconsistent output format despite detailed instructions</td>
+      <td>Examples demonstrating the exact desired shape</td></tr>
+    <tr><td>Review false positives on acceptable local patterns</td>
+      <td>Examples distinguishing acceptable patterns from genuine issues</td></tr>
+    <tr><td>Extraction returning empty/null for fields present in oddly-formatted documents</td>
+      <td>Examples showing correct extraction from varied structures — inline citations vs
+        bibliographies, tables vs narrative</td></tr>
+    <tr><td>Hallucinated values on informal inputs ("about two and a half k")</td>
+      <td>Examples demonstrating normalisation of informal measurements</td></tr>
+  </table>
+  </div>
+
+  <div class="key">
+    <span class="key-label">Criteria vs examples vs enforcement — the full ladder</span>
+    <p>By now you have the whole toolkit, and the exam mixes them in one stem:
+    <b>invariant?</b> → hook or gate (L03). <b>Boundary you can state?</b> → explicit categorical
+    criteria. <b>Boundary you can only show?</b> → few-shot examples with reasoning. Most real
+    systems need the second <em>and</em> third together — criteria draw the line, examples walk
+    it.</p>
+  </div>
+
+  <div class="note">
+    <span class="note-label">Where this goes next</span>
+    <p>L13 finishes Domain 4: what happens <em>after</em> extraction — validation-retry loops
+    with error feedback, when retries can't work, the Message Batches API, and multi-pass
+    review architectures.</p>
+  </div>
+
+  <!-- ======================= QUIZ ======================= -->
+  <div id="quiz" class="quiz"></div>
+
+  <div class="source">
+    <span class="source-label">Primary source — read this</span>
+    <p><a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/use-examples">Use
+    examples (multishot prompting)</a> and
+    <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/be-clear-and-direct">Be
+    clear and direct</a> from the prompt-engineering docs — short, and the official articulation
+    of both halves of this lesson.</p>
+  </div>
+
+  <div class="ask">
+    <strong>Ask me anything about this.</strong> Sharpest self-test: take a rule you'd give a
+    junior reviewer at Logiciel — "don't nitpick" — and rewrite it first as categorical criteria,
+    then as two boundary examples with reasoning. If the two artifacts feel different in kind,
+    you've understood the lesson.
+  </div>
+
+  <div class="foot">
+    <p><b>Lesson 12</b> · Domain 4 · Claude Certified Architect – Foundations</p>
+    <div class="nav">
+      <a href="../index.html">Course home</a>
+      <a href="0011-structured-output.html">← L11 Structured Output</a>
+      <a href="../reference/00-exam-blueprint.html">Ref 00 — Blueprint</a>
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/quiz.js"></script>
+<script>
+CCAR.quiz('#quiz', {
+  id: 'L12-criteria-fewshot',
+  title: 'Retrieval check — criteria &amp; few-shot',
+  passMark: 0.72,
+  questions: [
+    {
+      scenario: 'Claude Code for Continuous Integration — an automated reviewer posting findings on pull requests.',
+      ts: 'TS 4.1',
+      stem: 'The reviewer floods PRs with minor style nitpicks. Adding "be conservative and only report high-confidence findings" to the prompt did not help. Why not, and what does?',
+      options: [
+        'Confidence words are thresholds without a scale; define categories to report (bugs, security) and categories to skip (style, local patterns).',
+        'The instruction was placed too late in the prompt to carry weight; move the conservatism requirement into the opening system-prompt sentence.',
+        'The model cannot vary its precision at fixed temperature; lower the temperature so that only its strongest findings survive sampling.',
+        'General instructions need reinforcement to bind; repeat the conservatism requirement before each file the reviewer is asked to analyse.'
+      ],
+      answer: 0,
+      why: 'The blueprint states that "be conservative" and "only high-confidence" fail to improve precision — they adjust tone, not the boundary. Categorical report/skip criteria give the model a classification task instead of a self-grading task.',
+      trap: 'Options B and D assume the instruction is right but poorly delivered — the exam’s position is that this kind of instruction is the wrong kind, wherever it sits.'
+    },
+    {
+      ts: 'TS 4.1',
+      stem: 'A review bot checks comment accuracy. Which instruction best embodies explicit criteria?',
+      options: [
+        'Flag a comment only when its claimed behaviour contradicts the actual behaviour of the code it describes.',
+        'Carefully verify that every comment is accurate, complete, and helpful to future readers of the code.',
+        'Report a comment when your confidence that it is misleading exceeds roughly ninety percent certainty.',
+        'Treat outdated comments as high severity and stylistic comment issues as low severity in your findings.'
+      ],
+      answer: 0,
+      why: 'This is the blueprint’s own example, verbatim. A contradiction test is checkable against the code in front of the model; "accurate, complete, and helpful" is a vibe, and a numeric confidence threshold is a dial the model does not have.',
+      trap: 'Option D sounds structured but only ranks findings — it never defines what qualifies as a finding, which is the failing boundary.'
+    },
+    {
+      ts: 'TS 4.1',
+      stem: 'One review category (architecture suggestions) has a 60% false-positive rate; the others are accurate. Developers have begun dismissing all findings. What does the blueprint prescribe?',
+      options: [
+        'Temporarily disable the architecture category to restore trust, and improve its prompt before re-enabling it.',
+        'Keep every category active but rank architecture findings last, so the accurate categories are read first.',
+        'Add a confidence score to each architecture finding so developers can weigh how seriously to take each one.',
+        'Route architecture findings to a senior-developer channel where false positives do less damage to trust.'
+      ],
+      answer: 0,
+      why: 'High-FP categories undermine confidence in accurate categories — the bot is judged as a whole. The named move is temporary disablement plus offline prompt improvement: a silent category costs less than a noisy wrong one.',
+      trap: 'Option C reaches for self-reported confidence, the recurring unreliable proxy. Options B and D still deliver the noise; position and audience do not repair trust.'
+    },
+    {
+      scenario: 'Customer Support Resolution Agent — 55% first-contact resolution against an 80% target; logs show easy cases escalated and hard ones attempted.',
+      ts: 'TS 4.2',
+      stem: 'You are adding few-shot examples for escalation. Which property makes an example set effective?',
+      options: [
+        'Boundary cases showing the decision and the reasoning why it beat the plausible alternative.',
+        'The most frequent request types, so the examples cover the maximum share of real traffic.',
+        'Eight to ten examples per decision type, giving the model enough volume to induce the rule.',
+        'Clear-cut cases of each decision, so the model sees each action demonstrated unambiguously.'
+      ],
+      answer: 0,
+      why: 'The blueprint: 2–4 targeted examples for ambiguous scenarios, showing reasoning for why one action was chosen over plausible alternatives. The reasoning is what generalises — it names the principle that transfers to novel cases.',
+      trap: 'Options B and D pick easy or common cases — examples the model already gets right teach nothing about the failing boundary. Option C substitutes volume for targeting and burns context.'
+    },
+    {
+      ts: 'TS 4.2',
+      stem: 'Extraction returns null for a "methodology" field whenever papers describe methods in embedded prose rather than a dedicated section — though the information is present. What is the named fix?',
+      options: [
+        'Few-shot examples demonstrating correct extraction from documents with varied structures, including embedded prose.',
+        'Making the methodology field required and non-nullable, so the model must locate the information somewhere.',
+        'A validation-retry loop that re-sends the document whenever the methodology field comes back as null.',
+        'Chunking each paper into sections and running the extraction on every chunk in separate parallel requests.'
+      ],
+      answer: 0,
+      why: 'The blueprint names few-shot examples for varied document structures — methodology sections vs embedded details — as the fix for empty/null extraction of present fields. The model needs to see that the field’s content can live in unfamiliar shapes.',
+      trap: 'Option B un-fixes L11: forcing a required value on genuinely-absent cases manufactures hallucinations, and here it also masks the real problem. Option C retries the same failure without new information — L13 will formalise why that cannot work.'
+    },
+    {
+      ts: 'TS 4.2',
+      stem: 'A colleague argues few-shot examples merely make the model match the specific cases shown. Per the blueprint, what is the counter?',
+      options: [
+        'Examples that include reasoning let the model generalise the underlying judgement to novel patterns beyond the cases shown.',
+        'Examples are stored as templates the model consults at inference, so coverage grows automatically with each example added.',
+        'The concern is correct, which is why examples must be regenerated for each new document type the pipeline encounters.',
+        'Examples work through format imitation only, so generalisation of judgement requires fine-tuning rather than prompting.'
+      ],
+      answer: 0,
+      why: 'The blueprint states few-shot examples enable the model to generalise judgement to novel patterns rather than matching only pre-specified cases — provided the examples carry the reasoning that names the principle.',
+      trap: 'Option C concedes the objection and prescribes endless example maintenance; option D relocates the capability to fine-tuning, which is explicitly out of exam scope and unnecessary here.'
+    }
+  ]
+});
+</script>
+</body>
+</html>
