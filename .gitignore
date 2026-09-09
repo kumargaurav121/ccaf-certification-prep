@@ -2,8 +2,12 @@
 Thumbs.db
 
 # Third-party material kept local, not redistributed from this public repo.
-# Re-add with:  git add -f <file>   (see README)
-mocks/mock3-data.js            # Matthew Purcell's Practice Question Set v2 (LinkedIn)
-mocks/mock5-data.js            # OlivierAlter's GitHub practice set
-reference/exam-guide-v1.0.pdf  # Anthropic's official Exam Guide — download from the link in RESOURCES.md
+# Re-add deliberately with:  git add -f <file>   (see README)
+
+# Matthew Purcell's Practice Question Set v2 (LinkedIn)
+mocks/mock3-data.js
+# OlivierAlter's GitHub practice set
+mocks/mock5-data.js
+# Anthropic's official Exam Guide — download from the link in RESOURCES.md
+reference/exam-guide-v1.0.pdf
 reference/exam-guide-v1.0.txt
