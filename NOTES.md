@@ -116,4 +116,5 @@ for every lesson.
 ## Open items
 - [ ] Book the Pearson VUE slot — needed to fix the revision schedule.
 - [ ] Take Anthropic's own practice test (linked from the Skilljar cert page) as a baseline.
-- [ ] Workspace is not a git repo yet. Worth `git init` if he wants version history.
+- [x] Git repo initialised and pushed 2026-09-09 → https://github.com/kumargaurav121/ccaf-certification-prep (PUBLIC).
+      Third-party files (mock3/mock5 data, exam-guide PDF/txt) are .gitignored — they exist only in commit 1 history.
